@@ -1,6 +1,10 @@
 namespace byt_library.Domain.Enums;
 
-public class BorrowRecordStatus
+public enum BorrowRecordStatus
 {
-    
+    Requested, 
+    Canceled,
+    Ongoing, 
+    Overdue,
+    Returned,
 }
