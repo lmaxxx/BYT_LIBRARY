@@ -2,5 +2,6 @@
 
 public class Book
 {
-    
+    public string IBSN { get; set; }
+    public bool HasAudio { get; set; } 
 }

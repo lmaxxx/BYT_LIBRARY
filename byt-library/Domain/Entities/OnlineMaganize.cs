@@ -2,5 +2,5 @@
 
 public class OnlineMaganize
 {
-    
+    public string PageLink { get; set; }
 }
