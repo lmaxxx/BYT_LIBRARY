@@ -1,4 +1,4 @@
-﻿namespace byt_library.Domain.Entities;
+﻿namespace byt_library.Domain.Interfaces;
 
 public interface IResource
 {
