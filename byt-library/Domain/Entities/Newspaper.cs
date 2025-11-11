@@ -2,5 +2,5 @@
 
 public class Newspaper
 {
-    
+    public string Publisher { get; set; }
 }
