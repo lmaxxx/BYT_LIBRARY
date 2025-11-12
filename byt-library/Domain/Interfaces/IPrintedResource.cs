@@ -1,7 +1,9 @@
-﻿namespace byt_library.Domain.Entities;
+﻿using byt_library.Domain.Enums;
 
-public class IPrintedResource
+namespace byt_library.Domain.Interfaces;
+
+public interface IPrintedResource : IResource
 {
-    public string CoverType { get; set; }
-    public int Quantity { get; set; } 
+    public CoverType CoverType { get; set; }
+    public int Quantity { get; set; }
 }
