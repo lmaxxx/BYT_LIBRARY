@@ -25,12 +25,10 @@ public class Student : Person
         if (student == null)
             throw new ArgumentNullException(nameof(student), "Cannot add null student to extent");
 
-        // Add to Person extent first (assigns ID)
         AddPerson(student);
 
         lock (_lockStudent)
         {
-            // Validate Student-specific uniqueness
             if (_allStudents.Any(s => s.Id == student.Id))
                 throw new InvalidOperationException($"Student with ID {student.Id} already exists in Student extent");
 
@@ -46,7 +44,7 @@ public class Student : Person
             if (student != null)
             {
                 _allStudents.Remove(student);
-                RemovePerson(id); // Also remove from Person extent
+                RemovePerson(id);
                 return true;
             }
             return false;
@@ -103,7 +101,7 @@ public class Student : Person
         {
             foreach (var student in _allStudents.ToList())
             {
-                RemovePerson(student.Id); // Remove from Person extent
+                RemovePerson(student.Id);
             }
             _allStudents.Clear();
         }
