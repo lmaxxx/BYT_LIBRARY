@@ -1,4 +1,5 @@
-﻿namespace byt_library.Domain.Entities;
+﻿using byt_library.Domain.Interfaces;
+namespace byt_library.Domain.Entities;
 
 public class Catalog
 {
