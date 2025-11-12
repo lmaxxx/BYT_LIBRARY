@@ -10,36 +10,40 @@ public class BorrowRecord
     public DateTime DueDate { get; set; }
     public DateTime? ReturnDate { get; set; }
     public BorrowRecordStatus Status { get; set; }
-    public double FineAmount { get; set; }
+    
+    public BorrowRecord(int borrowDays = 30)
+    {
+        BorrowDate = DateTime.Now;
+        DueDate = BorrowDate.AddDays(borrowDays);
+        Status = BorrowRecordStatus.Ongoing;
+        ReturnDate = null;
+        GenerateBorrowCode();
+    }
+    
+    public double FineAmount
+    {
+        get
+        {
+            if (ReturnDate == null || ReturnDate <= DueDate)
+                return 0;
+
+            double lateDays = (ReturnDate.Value - DueDate).Days;
+            return lateDays; // 1$ per day
+        }
+    }
     public string BorrowCode { get; set; }
 
     private static List<BorrowRecord> _allBorrowRecords = new();
     private static int _nextId = 1;
     private static readonly object _lockBorrowRecord = new();
 
-    public BorrowRecord() { }
-
-    public BorrowRecord(int id)
-    {
-        if (id > 0)
-        {
-            Id = id;
-            lock (_lockBorrowRecord)
-            {
-                if (id >= _nextId)
-                    _nextId = id + 1;
-            }
-        }
-    }
-
     public double CalculateFine()
     {
         if (ReturnDate == null || ReturnDate <= DueDate)
             return 0;
 
-        var lateDays = (ReturnDate.Value - DueDate).Days;
-        FineAmount = lateDays * 1.0; // $1 per day
-        return FineAmount;
+        double lateDays = (ReturnDate.Value - DueDate).Days;
+        return lateDays; // 1$ per day
     }
     
     public void CancelBorrowRecordRequest()
