@@ -1,6 +1,8 @@
-﻿namespace byt_library.Domain.Entities;
+﻿using byt_library.Domain.Entities;
 
-public interface IDigitalResource
+namespace byt_library.Domain.Interfaces;
+
+public interface IDigitalResource : IResource
 {
     public int Size { get; set; }
     public string Link { get; set; }
