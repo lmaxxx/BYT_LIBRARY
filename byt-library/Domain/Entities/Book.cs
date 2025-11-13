@@ -18,6 +18,7 @@ public class Book : IDigitalResource, IPrintedResource
     public required List<Translation> Translations { get; set; }
     public required CoverType CoverType { get; set; }
     public int Quantity { get; set; }
+    public string IBSN { get; set; }
     
     public Book(string ISBN, bool hasAudio, string title, string description, CoverType coverType, int quantity, int size, string link)
     {
@@ -31,9 +32,6 @@ public class Book : IDigitalResource, IPrintedResource
         Link = link;
         Books.Add(this);
     }
-    
-    public string IBSN { get; set; }
-    public bool HasAudio { get; set; }
 
     private static List<Book> _allBooks = new();
     private static int _nextId = 1;
