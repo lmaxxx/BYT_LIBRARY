@@ -7,8 +7,8 @@ public class Author : Person
     private static List<Author> _allAuthors = new();
     private static readonly object _lockAuthor = new();
 
-    public Author(string firstName, string lastName, string email, DateTime dateOfBirth, string? nickname = null)
-        : base(firstName, lastName, email, dateOfBirth)
+    public Author(string firstName, string lastName, DateTime dateOfBirth, string? email = null, string? nickname = null)
+        : base(firstName, lastName, dateOfBirth, email)
     {
         Nickname = nickname;
     }
@@ -22,8 +22,9 @@ public class Author : Person
 
         lock (_lockAuthor)
         {
-            if (_allAuthors.Any(a => a.Email.Equals(author.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Author with email {author.Email} already exists in Author extent");
+            if (_allAuthors.Any(a => a.FirstName.Equals(author.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                                     a.LastName.Equals(author.LastName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Author with name {author.FirstName} {author.LastName} already exists in Author extent");
 
             if (!string.IsNullOrWhiteSpace(author.Nickname) &&
                 _allAuthors.Any(a => a.Nickname != null && a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
@@ -33,26 +34,30 @@ public class Author : Person
         }
     }
 
-    public static bool RemoveAuthor(string email)
+    public static bool RemoveAuthor(string firstName, string lastName)
     {
         lock (_lockAuthor)
         {
-            var author = _allAuthors.FirstOrDefault(a => a.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            var author = _allAuthors.FirstOrDefault(a =>
+                a.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                a.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (author != null)
             {
                 _allAuthors.Remove(author);
-                RemovePerson(email);
+                RemovePerson(firstName, lastName);
                 return true;
             }
             return false;
         }
     }
 
-    public static Author? GetAuthorByEmail(string email)
+    public static Author? GetAuthorByName(string firstName, string lastName)
     {
         lock (_lockAuthor)
         {
-            return _allAuthors.FirstOrDefault(a => a.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            return _allAuthors.FirstOrDefault(a =>
+                a.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                a.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -89,7 +94,7 @@ public class Author : Person
         {
             foreach (var author in _allAuthors.ToList())
             {
-                RemovePerson(author.Email);
+                RemovePerson(author.FirstName, author.LastName);
             }
             _allAuthors.Clear();
         }

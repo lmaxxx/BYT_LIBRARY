@@ -4,7 +4,7 @@ public class Person
 {
     public string FirstName { get; set; }
     public string LastName { get; set; }
-    public string Email { get; set; }
+    public string? Email { get; set; }
     public DateTime DateOfBirth { get; set; }
 
     public int Age
@@ -26,7 +26,7 @@ public class Person
     private static List<Person> _allPersons = new();
     private static readonly object _lock = new();
 
-    public Person(string firstName, string lastName, string email, DateTime dateOfBirth)
+    public Person(string firstName, string lastName, DateTime dateOfBirth, string? email = null)
     {
         FirstName = firstName;
         LastName = lastName;
@@ -41,21 +41,27 @@ public class Person
 
         lock (_lock)
         {
-            if (string.IsNullOrWhiteSpace(person.Email))
-                throw new ArgumentException("Person email cannot be empty");
+            if (string.IsNullOrWhiteSpace(person.FirstName))
+                throw new ArgumentException("Person first name cannot be empty");
 
-            if (_allPersons.Any(p => p.Email.Equals(person.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Person with email {person.Email} already exists in extent");
+            if (string.IsNullOrWhiteSpace(person.LastName))
+                throw new ArgumentException("Person last name cannot be empty");
+
+            if (_allPersons.Any(p => p.FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                                     p.LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Person with name {person.FirstName} {person.LastName} already exists in extent");
 
             _allPersons.Add(person);
         }
     }
 
-    public static bool RemovePerson(string email)
+    public static bool RemovePerson(string firstName, string lastName)
     {
         lock (_lock)
         {
-            var person = _allPersons.FirstOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            var person = _allPersons.FirstOrDefault(p =>
+                p.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (person != null)
             {
                 return _allPersons.Remove(person);
@@ -64,11 +70,13 @@ public class Person
         }
     }
 
-    public static Person? GetPersonByEmail(string email)
+    public static Person? GetPersonByName(string firstName, string lastName)
     {
         lock (_lock)
         {
-            return _allPersons.FirstOrDefault(p => p.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            return _allPersons.FirstOrDefault(p =>
+                p.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -90,6 +98,7 @@ public class Person
 
     public override string ToString()
     {
-        return $"{FirstName} {LastName} (Age: {Age}) - {Email}";
+        var emailPart = string.IsNullOrWhiteSpace(Email) ? "No email" : Email;
+        return $"{FirstName} {LastName} (Age: {Age}) - {emailPart}";
     }
 }
