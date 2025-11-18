@@ -23,14 +23,14 @@ public class Student : Person
     public static void AddStudent(Student student)
     {
         if (student == null)
-            throw new ArgumentNullException(nameof(student), "Cannot add null student to extent");
+            throw new StudentIsNullException(nameof(student), "Cannot add null student to extent");
 
         AddPerson(student);
 
         lock (_lockStudent)
         {
             if (_allStudents.Any(s => s.Id == student.Id))
-                throw new InvalidOperationException($"Student with ID {student.Id} already exists in Student extent");
+                throw new StudentAlreadyExistsException($"Student with ID {student.Id} already exists in Student extent");
 
             _allStudents.Add(student);
         }
