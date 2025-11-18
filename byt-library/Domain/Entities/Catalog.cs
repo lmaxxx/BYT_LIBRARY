@@ -1,16 +1,13 @@
-﻿using byt_library.Domain.Interfaces;
-using System.Text.Json;
+using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
 public class Catalog
 {
-    public int Id { get; private set; }
     public string Name { get; set; }
     public Dictionary<string, IResource> resources { get; }
 
     private static List<Catalog> _allCatalogs = new();
-    private static int _nextId = 1;
     private static readonly object _lockCatalog = new();
 
     public Catalog()
@@ -36,23 +33,21 @@ public class Catalog
 
         lock (_lockCatalog)
         {
-            if (catalog.Id == 0)
-            {
-                catalog.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(catalog.Name))
+                throw new ArgumentException("Catalog name cannot be empty");
 
-            if (_allCatalogs.Any(c => c.Id == catalog.Id))
-                throw new InvalidOperationException($"Catalog with ID {catalog.Id} already exists in extent");
+            if (_allCatalogs.Any(c => c.Name.Equals(catalog.Name, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Catalog with name {catalog.Name} already exists in extent");
 
             _allCatalogs.Add(catalog);
         }
     }
 
-    public static bool RemoveCatalog(int id)
+    public static bool RemoveCatalog(string name)
     {
         lock (_lockCatalog)
         {
-            var catalog = _allCatalogs.FirstOrDefault(c => c.Id == id);
+            var catalog = _allCatalogs.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (catalog != null)
             {
                 return _allCatalogs.Remove(catalog);
@@ -61,11 +56,11 @@ public class Catalog
         }
     }
 
-    public static Catalog? GetCatalogById(int id)
+    public static Catalog? GetCatalogByName(string name)
     {
         lock (_lockCatalog)
         {
-            return _allCatalogs.FirstOrDefault(c => c.Id == id);
+            return _allCatalogs.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -77,62 +72,11 @@ public class Catalog
         }
     }
 
-    public static int GetCatalogCount()
-    {
-        lock (_lockCatalog)
-        {
-            return _allCatalogs.Count;
-        }
-    }
-
     public static void ClearCatalogExtent()
     {
         lock (_lockCatalog)
         {
             _allCatalogs.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SaveCatalogsToFile(string filePath)
-    {
-        lock (_lockCatalog)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allCatalogs, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadCatalogsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockCatalog)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var catalogList = JsonSerializer.Deserialize<List<Catalog>>(json, options);
-
-            if (catalogList != null)
-            {
-                ClearCatalogExtent();
-
-                foreach (var catalog in catalogList)
-                {
-                    AddCatalog(catalog);
-                }
-            }
         }
     }
 }
