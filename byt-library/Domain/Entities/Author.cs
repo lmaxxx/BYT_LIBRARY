@@ -25,11 +25,11 @@ public class Author : Person
         lock (_lockAuthor)
         {
             if (_allAuthors.Any(a => a.Id == author.Id))
-                throw new InvalidOperationException($"Author with ID {author.Id} already exists in Author extent");
+                throw new AuthorAlreadyExiststException($"Author with ID {author.Id} already exists in Author extent");
 
             if (!string.IsNullOrWhiteSpace(author.Nickname) &&
                 _allAuthors.Any(a => a.Nickname != null && a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Author with nickname '{author.Nickname}' already exists in Author extent");
+                throw new RepeatingNicknameException($"Author with nickname '{author.Nickname}' already exists in Author extent");
 
             _allAuthors.Add(author);
         }

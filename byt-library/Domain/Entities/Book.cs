@@ -40,7 +40,7 @@ public class Book : IDigitalResource, IPrintedResource
     public static void AddBook(Book book)
     {
         if (book == null)
-            throw new ArgumentNullException(nameof(book), "Cannot add null book to extent");
+            throw new BookIsNullException(nameof(book), "Cannot add null book to extent");
 
         lock (_lockBook)
         {
@@ -50,7 +50,7 @@ public class Book : IDigitalResource, IPrintedResource
             }
 
             if (_allBooks.Any(b => b.Id == book.Id))
-                throw new InvalidOperationException($"Book with ID {book.Id} already exists in extent");
+                throw new BookAlreadyExistsException($"Book with ID {book.Id} already exists in extent");
 
             _allBooks.Add(book);
         }

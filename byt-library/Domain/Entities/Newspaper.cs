@@ -33,7 +33,7 @@ public class Newspaper : IPrintedResource
     public static void AddNewspaper(Newspaper newspaper)
     {
         if (newspaper == null)
-            throw new ArgumentNullException(nameof(newspaper), "Cannot add null newspaper to extent");
+            throw new NewspaperIsNullException(nameof(newspaper), "Cannot add null newspaper to extent");
 
         lock (_lockNewspaper)
         {
@@ -43,7 +43,7 @@ public class Newspaper : IPrintedResource
             }
 
             if (_allNewspapers.Any(n => n.Id == newspaper.Id))
-                throw new InvalidOperationException($"Newspaper with ID {newspaper.Id} already exists in extent");
+                throw new NewspaperAlreadyExistsException($"Newspaper with ID {newspaper.Id} already exists in extent");
 
             _allNewspapers.Add(newspaper);
         }
