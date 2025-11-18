@@ -15,7 +15,7 @@ public class Translation
     public static void AddTranslation(Translation translation)
     {
         if (translation == null)
-            throw new ArgumentNullException(nameof(translation), "Cannot add null translation to extent");
+            throw new TranslationIsNullException(nameof(translation), "Cannot add null translation to extent");
 
         lock (_lockTranslation)
         {
@@ -25,7 +25,7 @@ public class Translation
             }
 
             if (_allTranslations.Any(t => t.Id == translation.Id))
-                throw new InvalidOperationException($"Translation with ID {translation.Id} already exists in extent");
+                throw new TranslationAlreadyExistsException($"Translation with ID {translation.Id} already exists in extent");
 
             _allTranslations.Add(translation);
         }
