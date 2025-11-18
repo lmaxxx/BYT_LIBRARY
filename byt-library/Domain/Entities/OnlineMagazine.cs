@@ -14,7 +14,7 @@ public class OnlineMagazine
     public static void AddOnlineMaganize(OnlineMagazine onlineMagazine)
     {
         if (onlineMagazine == null)
-            throw new ArgumentNullException(nameof(onlineMagazine), "Cannot add null online magazine to extent");
+            throw new MagazineIsNullException(nameof(onlineMagazine), "Cannot add null online magazine to extent");
 
         lock (_lockOnlineMaganize)
         {
@@ -24,7 +24,7 @@ public class OnlineMagazine
             }
 
             if (_allOnlineMaganizes.Any(om => om.Id == onlineMagazine.Id))
-                throw new InvalidOperationException($"OnlineMaganize with ID {onlineMagazine.Id} already exists in extent");
+                throw new MagazineAlreadyExistsException($"OnlineMaganize with ID {onlineMagazine.Id} already exists in extent");
 
             _allOnlineMaganizes.Add(onlineMagazine);
         }
