@@ -51,7 +51,7 @@ public class Person
     public static void AddPerson(Person person)
     {
         if (person == null)
-            throw new ArgumentNullException(nameof(person), "Cannot add null person to extent");
+            throw new PersonIsNullException(nameof(person), "Cannot add null person to extent");
 
         lock (_lock)
         {
@@ -61,11 +61,11 @@ public class Person
             }
 
             if (_allPersons.Any(p => p.Id == person.Id))
-                throw new InvalidOperationException($"Person with ID {person.Id} already exists in extent");
+                throw new PersonAlreadyExistsException($"Person with ID {person.Id} already exists in extent");
 
             if (!string.IsNullOrWhiteSpace(person.Email) &&
                 _allPersons.Any(p => p.Email != null && p.Email.Equals(person.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Person with email {person.Email} already exists in extent");
+                throw new PersonWithThisEmailAlreadyExistsException($"Person with email {person.Email} already exists in extent");
 
             _allPersons.Add(person);
         }
