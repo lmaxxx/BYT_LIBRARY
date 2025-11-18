@@ -7,8 +7,8 @@ public class Student : Person
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
 
-    public Student(string firstName, string lastName, string email, DateTime dateOfBirth, DateTime enrollmentDate)
-        : base(firstName, lastName, email, dateOfBirth)
+    public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null)
+        : base(firstName, lastName, dateOfBirth, email)
     {
         EnrollmentDate = enrollmentDate;
     }
@@ -27,33 +27,38 @@ public class Student : Person
 
         lock (_lockStudent)
         {
-            if (_allStudents.Any(s => s.Email.Equals(student.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Student with email {student.Email} already exists in Student extent");
+            if (_allStudents.Any(s => s.FirstName.Equals(student.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                                      s.LastName.Equals(student.LastName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Student with name {student.FirstName} {student.LastName} already exists in Student extent");
 
             _allStudents.Add(student);
         }
     }
 
-    public static bool RemoveStudent(string email)
+    public static bool RemoveStudent(string firstName, string lastName)
     {
         lock (_lockStudent)
         {
-            var student = _allStudents.FirstOrDefault(s => s.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            var student = _allStudents.FirstOrDefault(s =>
+                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (student != null)
             {
                 _allStudents.Remove(student);
-                RemovePerson(email);
+                RemovePerson(firstName, lastName);
                 return true;
             }
             return false;
         }
     }
 
-    public static Student? GetStudentByEmail(string email)
+    public static Student? GetStudentByName(string firstName, string lastName)
     {
         lock (_lockStudent)
         {
-            return _allStudents.FirstOrDefault(s => s.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            return _allStudents.FirstOrDefault(s =>
+                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
     
@@ -91,7 +96,7 @@ public class Student : Person
         {
             foreach (var student in _allStudents.ToList())
             {
-                RemovePerson(student.Email);
+                RemovePerson(student.FirstName, student.LastName);
             }
             _allStudents.Clear();
         }

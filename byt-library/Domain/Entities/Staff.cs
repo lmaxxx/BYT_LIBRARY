@@ -7,8 +7,8 @@ public class Staff : Person
     private static List<Staff> _allStaff = new();
     private static readonly object _lockStaff = new();
 
-    public Staff(string firstName, string lastName, string email, DateTime dateOfBirth, string department)
-        : base(firstName, lastName, email, dateOfBirth)
+    public Staff(string firstName, string lastName, DateTime dateOfBirth, string department, string? email = null)
+        : base(firstName, lastName, dateOfBirth, email)
     {
         Department = department;
     }
@@ -22,33 +22,38 @@ public class Staff : Person
 
         lock (_lockStaff)
         {
-            if (_allStaff.Any(s => s.Email.Equals(staff.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Staff with email {staff.Email} already exists in Staff extent");
+            if (_allStaff.Any(s => s.FirstName.Equals(staff.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                                   s.LastName.Equals(staff.LastName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Staff with name {staff.FirstName} {staff.LastName} already exists in Staff extent");
 
             _allStaff.Add(staff);
         }
     }
 
-    public static bool RemoveStaff(string email)
+    public static bool RemoveStaff(string firstName, string lastName)
     {
         lock (_lockStaff)
         {
-            var staff = _allStaff.FirstOrDefault(s => s.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            var staff = _allStaff.FirstOrDefault(s =>
+                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (staff != null)
             {
                 _allStaff.Remove(staff);
-                RemovePerson(email);
+                RemovePerson(firstName, lastName);
                 return true;
             }
             return false;
         }
     }
 
-    public static Staff? GetStaffByEmail(string email)
+    public static Staff? GetStaffByName(string firstName, string lastName)
     {
         lock (_lockStaff)
         {
-            return _allStaff.FirstOrDefault(s => s.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            return _allStaff.FirstOrDefault(s =>
+                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -76,7 +81,7 @@ public class Staff : Person
         {
             foreach (var staff in _allStaff.ToList())
             {
-                RemovePerson(staff.Email);
+                RemovePerson(staff.FirstName, staff.LastName);
             }
             _allStaff.Clear();
         }
