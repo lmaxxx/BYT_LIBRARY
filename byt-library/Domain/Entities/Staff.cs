@@ -18,14 +18,14 @@ public class Staff : Person
     public static void AddStaff(Staff staff)
     {
         if (staff == null)
-            throw new ArgumentNullException(nameof(staff), "Cannot add null staff to extent");
+            throw new StaffIsNullException(nameof(staff), "Cannot add null staff to extent");
 
         AddPerson(staff);
 
         lock (_lockStaff)
         {
             if (_allStaff.Any(s => s.Id == staff.Id))
-                throw new InvalidOperationException($"Staff with ID {staff.Id} already exists in Staff extent");
+                throw new StaffAlreadyExistsException($"Staff with ID {staff.Id} already exists in Staff extent");
 
             _allStaff.Add(staff);
         }
