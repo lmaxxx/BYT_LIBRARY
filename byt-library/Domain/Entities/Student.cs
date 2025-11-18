@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Student : Person
@@ -9,8 +7,8 @@ public class Student : Person
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
 
-    public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null, int id = 0)
-        : base(firstName, lastName, dateOfBirth, email, id)
+    public Student(string firstName, string lastName, string email, DateTime dateOfBirth, DateTime enrollmentDate)
+        : base(firstName, lastName, email, dateOfBirth)
     {
         EnrollmentDate = enrollmentDate;
     }
@@ -29,33 +27,33 @@ public class Student : Person
 
         lock (_lockStudent)
         {
-            if (_allStudents.Any(s => s.Id == student.Id))
-                throw new InvalidOperationException($"Student with ID {student.Id} already exists in Student extent");
+            if (_allStudents.Any(s => s.Email.Equals(student.Email, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Student with email {student.Email} already exists in Student extent");
 
             _allStudents.Add(student);
         }
     }
-    
-    public static bool RemoveStudent(int id)
+
+    public static bool RemoveStudent(string email)
     {
         lock (_lockStudent)
         {
-            var student = _allStudents.FirstOrDefault(s => s.Id == id);
+            var student = _allStudents.FirstOrDefault(s => s.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
             if (student != null)
             {
                 _allStudents.Remove(student);
-                RemovePerson(id);
+                RemovePerson(email);
                 return true;
             }
             return false;
         }
     }
-    
-    public static Student? GetStudentById(int id)
+
+    public static Student? GetStudentByEmail(string email)
     {
         lock (_lockStudent)
         {
-            return _allStudents.FirstOrDefault(s => s.Id == id);
+            return _allStudents.FirstOrDefault(s => s.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
         }
     }
     
@@ -86,66 +84,16 @@ public class Student : Person
                               .AsReadOnly();
         }
     }
-    
-    public static int GetStudentCount()
-    {
-        lock (_lockStudent)
-        {
-            return _allStudents.Count;
-        }
-    }
-    
+
     public static void ClearStudentExtent()
     {
         lock (_lockStudent)
         {
             foreach (var student in _allStudents.ToList())
             {
-                RemovePerson(student.Id);
+                RemovePerson(student.Email);
             }
             _allStudents.Clear();
-        }
-    }
-    
-    public static void SaveStudentsToFile(string filePath)
-    {
-        lock (_lockStudent)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allStudents, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-    
-    public static void LoadStudentsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockStudent)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var studentList = JsonSerializer.Deserialize<List<Student>>(json, options);
-
-            if (studentList != null)
-            {
-                ClearStudentExtent();
-
-                foreach (var student in studentList)
-                {
-                    AddStudent(student);
-                }
-            }
         }
     }
 

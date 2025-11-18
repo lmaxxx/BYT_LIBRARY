@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Author : Person
@@ -9,8 +7,8 @@ public class Author : Person
     private static List<Author> _allAuthors = new();
     private static readonly object _lockAuthor = new();
 
-    public Author(string firstName, string lastName, DateTime dateOfBirth, string? email = null, string? nickname = null, int id = 0)
-        : base(firstName, lastName, dateOfBirth, email, id)
+    public Author(string firstName, string lastName, string email, DateTime dateOfBirth, string? nickname = null)
+        : base(firstName, lastName, email, dateOfBirth)
     {
         Nickname = nickname;
     }
@@ -24,8 +22,8 @@ public class Author : Person
 
         lock (_lockAuthor)
         {
-            if (_allAuthors.Any(a => a.Id == author.Id))
-                throw new InvalidOperationException($"Author with ID {author.Id} already exists in Author extent");
+            if (_allAuthors.Any(a => a.Email.Equals(author.Email, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Author with email {author.Email} already exists in Author extent");
 
             if (!string.IsNullOrWhiteSpace(author.Nickname) &&
                 _allAuthors.Any(a => a.Nickname != null && a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
@@ -35,26 +33,26 @@ public class Author : Person
         }
     }
 
-    public static bool RemoveAuthor(int id)
+    public static bool RemoveAuthor(string email)
     {
         lock (_lockAuthor)
         {
-            var author = _allAuthors.FirstOrDefault(a => a.Id == id);
+            var author = _allAuthors.FirstOrDefault(a => a.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
             if (author != null)
             {
                 _allAuthors.Remove(author);
-                RemovePerson(id);
+                RemovePerson(email);
                 return true;
             }
             return false;
         }
     }
 
-    public static Author? GetAuthorById(int id)
+    public static Author? GetAuthorByEmail(string email)
     {
         lock (_lockAuthor)
         {
-            return _allAuthors.FirstOrDefault(a => a.Id == id);
+            return _allAuthors.FirstOrDefault(a => a.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -85,65 +83,15 @@ public class Author : Person
         }
     }
 
-    public static int GetAuthorCount()
-    {
-        lock (_lockAuthor)
-        {
-            return _allAuthors.Count;
-        }
-    }
-
     public static void ClearAuthorExtent()
     {
         lock (_lockAuthor)
         {
             foreach (var author in _allAuthors.ToList())
             {
-                RemovePerson(author.Id);
+                RemovePerson(author.Email);
             }
             _allAuthors.Clear();
-        }
-    }
-
-    public static void SaveAuthorsToFile(string filePath)
-    {
-        lock (_lockAuthor)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allAuthors, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadAuthorsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockAuthor)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var authorList = JsonSerializer.Deserialize<List<Author>>(json, options);
-
-            if (authorList != null)
-            {
-                ClearAuthorExtent();
-
-                foreach (var author in authorList)
-                {
-                    AddAuthor(author);
-                }
-            }
         }
     }
 

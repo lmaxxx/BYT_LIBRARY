@@ -1,11 +1,10 @@
-﻿using byt_library.Domain.Enums;
-using System.Text.Json;
+using byt_library.Domain.Enums;
 
 namespace byt_library.Domain.Entities;
 
 public class Payment
 {
-    public int Id { get; private set; }
+    public string PaymentCode { get; private set; } = string.Empty;
     public double Amount { get; init; }
     public DateTime PaymentDate { get; init; }
     public PaymentMethod PaymentMethod { get; init; }
@@ -14,12 +13,10 @@ public class Payment
     public BorrowRecord? BorrowRecord { get; init; }
 
     private static List<Payment> _allPayments = new();
-    private static int _nextId = 1;
     private static readonly object _lockPayment = new();
 
     public Payment() { }
     
-    // XOR constructor
     public Payment(
         double amount,
         DateTime paymentDate,
@@ -27,13 +24,13 @@ public class Payment
         Subscription? subscription = null,
         BorrowRecord? borrowRecord = null)
     {
-        // enforce XOR rule
         if ((subscription == null && borrowRecord == null) ||
             (subscription != null && borrowRecord != null))
         {
             throw new ArgumentException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
         }
 
+        PaymentCode = $"PAY-{Guid.NewGuid()}";
         Amount = amount;
         PaymentDate = paymentDate;
         PaymentMethod = paymentMethod;
@@ -48,23 +45,21 @@ public class Payment
 
         lock (_lockPayment)
         {
-            if (payment.Id == 0)
-            {
-                payment.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(payment.PaymentCode))
+                throw new ArgumentException("PaymentCode cannot be empty");
 
-            if (_allPayments.Any(p => p.Id == payment.Id))
-                throw new InvalidOperationException($"Payment with ID {payment.Id} already exists in extent");
+            if (_allPayments.Any(p => p.PaymentCode.Equals(payment.PaymentCode, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Payment with code {payment.PaymentCode} already exists in extent");
 
             _allPayments.Add(payment);
         }
     }
 
-    public static bool RemovePayment(int id)
+    public static bool RemovePayment(string paymentCode)
     {
         lock (_lockPayment)
         {
-            var payment = _allPayments.FirstOrDefault(p => p.Id == id);
+            var payment = _allPayments.FirstOrDefault(p => p.PaymentCode.Equals(paymentCode, StringComparison.OrdinalIgnoreCase));
             if (payment != null)
             {
                 return _allPayments.Remove(payment);
@@ -73,11 +68,11 @@ public class Payment
         }
     }
 
-    public static Payment? GetPaymentById(int id)
+    public static Payment? GetPaymentByCode(string paymentCode)
     {
         lock (_lockPayment)
         {
-            return _allPayments.FirstOrDefault(p => p.Id == id);
+            return _allPayments.FirstOrDefault(p => p.PaymentCode.Equals(paymentCode, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -89,62 +84,11 @@ public class Payment
         }
     }
 
-    public static int GetPaymentCount()
-    {
-        lock (_lockPayment)
-        {
-            return _allPayments.Count;
-        }
-    }
-
     public static void ClearPaymentExtent()
     {
         lock (_lockPayment)
         {
             _allPayments.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SavePaymentsToFile(string filePath)
-    {
-        lock (_lockPayment)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allPayments, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadPaymentsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockPayment)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var paymentList = JsonSerializer.Deserialize<List<Payment>>(json, options);
-
-            if (paymentList != null)
-            {
-                ClearPaymentExtent();
-
-                foreach (var payment in paymentList)
-                {
-                    AddPayment(payment);
-                }
-            }
         }
     }
 }
