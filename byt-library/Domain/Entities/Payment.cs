@@ -31,7 +31,7 @@ public class Payment
         if ((subscription == null && borrowRecord == null) ||
             (subscription != null && borrowRecord != null))
         {
-            throw new ArgumentException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
+            throw new PaymentGoalIsNotDefinedException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
         }
 
         Amount = amount;
@@ -44,7 +44,7 @@ public class Payment
     public static void AddPayment(Payment payment)
     {
         if (payment == null)
-            throw new ArgumentNullException(nameof(payment), "Cannot add null payment to extent");
+            throw new PaymentIsNullException(nameof(payment), "Cannot add null payment to extent");
 
         lock (_lockPayment)
         {
@@ -54,7 +54,7 @@ public class Payment
             }
 
             if (_allPayments.Any(p => p.Id == payment.Id))
-                throw new InvalidOperationException($"Payment with ID {payment.Id} already exists in extent");
+                throw new PaymentAlreadyExistsException($"Payment with ID {payment.Id} already exists in extent");
 
             _allPayments.Add(payment);
         }
