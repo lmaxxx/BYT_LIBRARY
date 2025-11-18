@@ -38,7 +38,7 @@ public class Subscription
     public static void AddSubscription(Subscription subscription)
     {
         if (subscription == null)
-            throw new ArgumentNullException(nameof(subscription), "Cannot add null subscription to extent");
+            throw new SubscriptionIsNullException(nameof(subscription), "Cannot add null subscription to extent");
 
         lock (_lockSubscription)
         {
@@ -48,7 +48,7 @@ public class Subscription
             }
 
             if (_allSubscriptions.Any(s => s.Id == subscription.Id))
-                throw new InvalidOperationException($"Subscription with ID {subscription.Id} already exists in extent");
+                throw new SubscriptionAlreadyExistsException($"Subscription with ID {subscription.Id} already exists in extent");
 
             _allSubscriptions.Add(subscription);
         }
