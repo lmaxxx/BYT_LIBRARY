@@ -1,84 +1,92 @@
 ﻿using System.Text.Json;
+using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
-public class OnlineMagazine
+public class OnlineMagazine : IDigitalResource
 {
     public int Id { get; private set; }
-    public string PageLink { get; set; }
+    
+    public required bool HasAudio { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public int Size { get; set; }
+    public required string Link { get; set; }
+    public required List<Translation> Translations { get; set; }
+    public required string PageLink { get; set; }
 
-    private static List<OnlineMagazine> _allOnlineMaganizes = new();
+    private static List<OnlineMagazine> _allOnlineMagazine = new();
     private static int _nextId = 1;
-    private static readonly object _lockOnlineMaganize = new();
+    private static readonly object _lockOnlineMagazine = new();
 
-    public static void AddOnlineMaganize(OnlineMagazine onlineMagazine)
+    public static void AddOnlineMagazine(OnlineMagazine onlineMagazine)
     {
         if (onlineMagazine == null)
             throw new ArgumentNullException(nameof(onlineMagazine), "Cannot add null online magazine to extent");
 
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
             if (onlineMagazine.Id == 0)
             {
                 onlineMagazine.Id = _nextId++;
             }
 
-            if (_allOnlineMaganizes.Any(om => om.Id == onlineMagazine.Id))
+            if (_allOnlineMagazine.Any(om => om.Id == onlineMagazine.Id))
                 throw new InvalidOperationException($"OnlineMaganize with ID {onlineMagazine.Id} already exists in extent");
 
-            _allOnlineMaganizes.Add(onlineMagazine);
+            _allOnlineMagazine.Add(onlineMagazine);
         }
     }
 
-    public static bool RemoveOnlineMaganize(int id)
+    public static bool RemoveOnlineMagazine(int id)
     {
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
-            var onlineMaganize = _allOnlineMaganizes.FirstOrDefault(om => om.Id == id);
+            var onlineMaganize = _allOnlineMagazine.FirstOrDefault(om => om.Id == id);
             if (onlineMaganize != null)
             {
-                return _allOnlineMaganizes.Remove(onlineMaganize);
+                return _allOnlineMagazine.Remove(onlineMaganize);
             }
             return false;
         }
     }
 
-    public static OnlineMagazine? GetOnlineMaganizeById(int id)
+    public static OnlineMagazine? GetOnlineMagazineById(int id)
     {
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
-            return _allOnlineMaganizes.FirstOrDefault(om => om.Id == id);
+            return _allOnlineMagazine.FirstOrDefault(om => om.Id == id);
         }
     }
 
-    public static IReadOnlyList<OnlineMagazine> GetAllOnlineMaganizes()
+    public static IReadOnlyList<OnlineMagazine> GetAllOnlineMagazines()
     {
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
-            return _allOnlineMaganizes.AsReadOnly();
+            return _allOnlineMagazine.AsReadOnly();
         }
     }
 
-    public static int GetOnlineMaganizeCount()
+    public static int GetOnlineMagazineCount()
     {
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
-            return _allOnlineMaganizes.Count;
+            return _allOnlineMagazine.Count;
         }
     }
 
-    public static void ClearOnlineMaganizeExtent()
+    public static void ClearOnlineMagazineExtent()
     {
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
-            _allOnlineMaganizes.Clear();
+            _allOnlineMagazine.Clear();
             _nextId = 1;
         }
     }
 
-    public static void SaveOnlineMaganizesToFile(string filePath)
+    public static void SaveOnlineMagazinesToFile(string filePath)
     {
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
             var options = new JsonSerializerOptions
             {
@@ -86,17 +94,17 @@ public class OnlineMagazine
                 PropertyNameCaseInsensitive = true
             };
 
-            var json = JsonSerializer.Serialize(_allOnlineMaganizes, options);
+            var json = JsonSerializer.Serialize(_allOnlineMagazine, options);
             File.WriteAllText(filePath, json);
         }
     }
 
-    public static void LoadOnlineMaganizesFromFile(string filePath)
+    public static void LoadOnlineMagazinesFromFile(string filePath)
     {
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
-        lock (_lockOnlineMaganize)
+        lock (_lockOnlineMagazine)
         {
             var json = File.ReadAllText(filePath);
             var options = new JsonSerializerOptions
@@ -104,15 +112,15 @@ public class OnlineMagazine
                 PropertyNameCaseInsensitive = true
             };
 
-            var onlineMaganizeList = JsonSerializer.Deserialize<List<OnlineMagazine>>(json, options);
+            var onlineMagazineList = JsonSerializer.Deserialize<List<OnlineMagazine>>(json, options);
 
-            if (onlineMaganizeList != null)
+            if (onlineMagazineList != null)
             {
-                ClearOnlineMaganizeExtent();
+                ClearOnlineMagazineExtent();
 
-                foreach (var onlineMaganize in onlineMaganizeList)
+                foreach (var onlineMagazine in onlineMagazineList)
                 {
-                    AddOnlineMaganize(onlineMaganize);
+                    AddOnlineMagazine(onlineMagazine);
                 }
             }
         }

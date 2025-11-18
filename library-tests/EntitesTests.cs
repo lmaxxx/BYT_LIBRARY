@@ -1,5 +1,6 @@
 using byt_library.Domain.Entities;
 using byt_library.Domain.Enums;
+using byt_library.Domain.Interfaces;
 
 namespace library_tests;
 
@@ -220,5 +221,46 @@ public class EntitiesTests
         Assert.That(retrievedBook.HasAudio, Is.True, "HasAudio property should be set");
         Assert.That(retrievedBook.Quantity, Is.EqualTo(5), "Quantity should be 5");
         Assert.That(retrievedBook.Id, Is.GreaterThan(0), "ID should be auto-generated");
+    }
+
+    [Test]
+    public void IDigitalResource_AddTranslation_WithLanguage_ThrowsNotSupportedExceptionWhenExpected()
+    {
+        IDigitalResource book = new Book(
+            ISBN: "978-3-16-148410-0",
+            hasAudio: true,
+            title: "Clean Code",
+            description: "A Handbook of Agile Software Craftsmanship",
+            coverType: CoverType.Hard,
+            quantity: 5,
+            size: 464,
+            link: "https://example.com/clean-code"
+        )
+        {
+            Title = "Clean Code",
+            Description = "A Handbook of Agile Software Craftsmanship",
+            Link = "https://example.com/clean-code",
+            CoverType = CoverType.Hard,
+            Translations = []
+        };
+
+        IDigitalResource magazine = new OnlineMagazine()
+        {
+            Title = "Harvard Law is Awful",
+            Description = "About Harvard law.",
+            Link = "https://example.com/harvard-law-is-awful",
+            Size = 464,
+            PageLink = "https://newyorkmagazine.com/harvard-law-is-awful",
+            Translations = [],
+            HasAudio = false
+        };
+        
+        Assert.Throws<NotSupportedException>(() => magazine.AddTranslation("German"));
+        Assert.Throws<NotSupportedException>(() => magazine.AddTranslation("French"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("English"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("Polish"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("Ukrainian"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("Spanish"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("Italian"));
     }
 }
