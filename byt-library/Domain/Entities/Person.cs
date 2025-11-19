@@ -37,19 +37,19 @@ public class Person
     public static void AddPerson(Person person)
     {
         if (person == null)
-            throw new ArgumentNullException(nameof(person), "Cannot add null person to extent");
+            throw new PersonIsNullException(nameof(person), "Cannot add null person to extent");
 
         lock (_lock)
         {
             if (string.IsNullOrWhiteSpace(person.FirstName))
-                throw new ArgumentException("Person first name cannot be empty");
+                throw new PersonFirstNameIsEmptyException("Person first name cannot be empty");
 
             if (string.IsNullOrWhiteSpace(person.LastName))
-                throw new ArgumentException("Person last name cannot be empty");
+                throw new PersonLastNameIsEmptyException("Person last name cannot be empty");
 
             if (_allPersons.Any(p => p.FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                      p.LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Person with name {person.FirstName} {person.LastName} already exists in extent");
+                throw new PersonAlreadyExistsException($"Person with name {person.FirstName} {person.LastName} already exists in extent");
 
             _allPersons.Add(person);
         }
