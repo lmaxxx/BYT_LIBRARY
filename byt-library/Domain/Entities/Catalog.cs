@@ -29,15 +29,15 @@ public class Catalog
     public static void AddCatalog(Catalog catalog)
     {
         if (catalog == null)
-            throw new ArgumentNullException(nameof(catalog), "Cannot add null catalog to extent");
+            throw new CatalogIsNullException(nameof(catalog), "Cannot add null catalog to extent");
 
         lock (_lockCatalog)
         {
             if (string.IsNullOrWhiteSpace(catalog.Name))
-                throw new ArgumentException("Catalog name cannot be empty");
+                throw new CatalogIsEmptyException("Catalog name cannot be empty");
 
             if (_allCatalogs.Any(c => c.Name.Equals(catalog.Name, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Catalog with name {catalog.Name} already exists in extent");
+                throw new CatalogWithThisNameAlreadyExistsException($"Catalog with name {catalog.Name} already exists in extent");
 
             _allCatalogs.Add(catalog);
         }
