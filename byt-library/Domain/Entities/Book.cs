@@ -26,7 +26,7 @@ public class Book : IDigitalResource, IPrintedResource
         lock (_lockBook)
         {
             if (string.IsNullOrWhiteSpace(book.ISBN))
-                throw new ArgumentException("Book ISBN cannot be empty");
+                throw new BookISBNIsEmptyException("Book ISBN cannot be empty");
 
             if (_allBooks.Any(b => b.Id == book.Id))
                 throw new BookAlreadyExistsException($"Book with ID {book.Id} already exists in extent");
