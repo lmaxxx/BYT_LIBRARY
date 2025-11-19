@@ -10,15 +10,15 @@ public class OnlineMagazine
     public static void AddOnlineMagazine(OnlineMagazine onlineMagazine)
     {
         if (onlineMagazine == null)
-            throw new ArgumentNullException(nameof(onlineMagazine), "Cannot add null online magazine to extent");
+            throw new OnlineMagazieIsNullException(nameof(onlineMagazine), "Cannot add null online magazine to extent");
 
         lock (_lockOnlineMagazine)
         {
             if (string.IsNullOrWhiteSpace(onlineMagazine.PageLink))
-                throw new ArgumentException("PageLink cannot be empty");
+                throw new PageLinkIsEmptyException("PageLink cannot be empty");
 
             if (_allOnlineMagazines.Any(om => om.PageLink.Equals(onlineMagazine.PageLink, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"OnlineMagazine with PageLink {onlineMagazine.PageLink} already exists in extent");
+                throw new OnlineMagazineAlreadyExistsException($"OnlineMagazine with PageLink {onlineMagazine.PageLink} already exists in extent");
 
             _allOnlineMagazines.Add(onlineMagazine);
         }
