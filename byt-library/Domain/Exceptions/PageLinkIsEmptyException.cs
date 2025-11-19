@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace byt_library.Domain.Exceptions
+﻿public class PageLinkIsEmptyException : ArgumentException
 {
-    internal class PageLinkIsEmptyException
+    public PageLinkIsEmptyException(string message) : base(message)
     {
+
     }
 }

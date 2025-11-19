@@ -27,7 +27,7 @@ public class Payment
         if ((subscription == null && borrowRecord == null) ||
             (subscription != null && borrowRecord != null))
         {
-            throw new ArgumentException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
+            throw new PaymentIsNotAttachedException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
         }
 
         PaymentCode = $"PAY-{Guid.NewGuid()}";
@@ -41,15 +41,15 @@ public class Payment
     public static void AddPayment(Payment payment)
     {
         if (payment == null)
-            throw new ArgumentNullException(nameof(payment), "Cannot add null payment to extent");
+            throw new PaymentIsNullException(nameof(payment), "Cannot add null payment to extent");
 
         lock (_lockPayment)
         {
             if (string.IsNullOrWhiteSpace(payment.PaymentCode))
-                throw new ArgumentException("PaymentCode cannot be empty");
+                throw new PaymentIsEmptyException("PaymentCode cannot be empty");
 
             if (_allPayments.Any(p => p.PaymentCode.Equals(payment.PaymentCode, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Payment with code {payment.PaymentCode} already exists in extent");
+                throw new PaymentAlreadyExistsException($"Payment with code {payment.PaymentCode} already exists in extent");
 
             _allPayments.Add(payment);
         }
