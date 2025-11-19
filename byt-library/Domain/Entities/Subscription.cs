@@ -36,15 +36,20 @@ public class Subscription
     public static void AddSubscription(Subscription subscription)
     {
         if (subscription == null)
-            throw new ArgumentNullException(nameof(subscription), "Cannot add null subscription to extent");
+            throw new SubscriptionIsNullException(nameof(subscription), "Cannot add null subscription to extent");
 
         lock (_lockSubscription)
         {
             if (string.IsNullOrWhiteSpace(subscription.SubscriptionCode))
                 throw new ArgumentException("SubscriptionCode cannot be empty");
 
+<<<<<<< HEAD
             if (_allSubscriptions.Any(s => s.SubscriptionCode.Equals(subscription.SubscriptionCode, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Subscription with code {subscription.SubscriptionCode} already exists in extent");
+=======
+            if (_allSubscriptions.Any(s => s.Id == subscription.Id))
+                throw new SubscriptionAlreadyExistsException($"Subscription with ID {subscription.Id} already exists in extent");
+>>>>>>> feat/customexceptions
 
             _allSubscriptions.Add(subscription);
         }

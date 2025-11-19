@@ -17,19 +17,24 @@ public class Newspaper : IPrintedResource
     public static void AddNewspaper(Newspaper newspaper)
     {
         if (newspaper == null)
-            throw new ArgumentNullException(nameof(newspaper), "Cannot add null newspaper to extent");
+            throw new NewspaperIsNullException(nameof(newspaper), "Cannot add null newspaper to extent");
 
         lock (_lockNewspaper)
         {
             if (string.IsNullOrWhiteSpace(newspaper.Title))
                 throw new ArgumentException("Title cannot be empty");
 
+<<<<<<< HEAD
             if (string.IsNullOrWhiteSpace(newspaper.Publisher))
                 throw new ArgumentException("Publisher cannot be empty");
 
             if (_allNewspapers.Any(n => n.Title.Equals(newspaper.Title, StringComparison.OrdinalIgnoreCase) &&
                                          n.Publisher.Equals(newspaper.Publisher, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Newspaper with Title '{newspaper.Title}' and Publisher '{newspaper.Publisher}' already exists in extent");
+=======
+            if (_allNewspapers.Any(n => n.Id == newspaper.Id))
+                throw new NewspaperAlreadyExistsException($"Newspaper with ID {newspaper.Id} already exists in extent");
+>>>>>>> feat/customexceptions
 
             _allNewspapers.Add(newspaper);
         }

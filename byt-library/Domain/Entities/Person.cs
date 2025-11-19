@@ -37,19 +37,28 @@ public class Person
     public static void AddPerson(Person person)
     {
         if (person == null)
-            throw new ArgumentNullException(nameof(person), "Cannot add null person to extent");
+            throw new PersonIsNullException(nameof(person), "Cannot add null person to extent");
 
         lock (_lock)
         {
             if (string.IsNullOrWhiteSpace(person.FirstName))
                 throw new ArgumentException("Person first name cannot be empty");
 
+<<<<<<< HEAD
             if (string.IsNullOrWhiteSpace(person.LastName))
                 throw new ArgumentException("Person last name cannot be empty");
 
             if (_allPersons.Any(p => p.FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                      p.LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Person with name {person.FirstName} {person.LastName} already exists in extent");
+=======
+            if (_allPersons.Any(p => p.Id == person.Id))
+                throw new PersonAlreadyExistsException($"Person with ID {person.Id} already exists in extent");
+
+            if (!string.IsNullOrWhiteSpace(person.Email) &&
+                _allPersons.Any(p => p.Email != null && p.Email.Equals(person.Email, StringComparison.OrdinalIgnoreCase)))
+                throw new PersonWithThisEmailAlreadyExistsException($"Person with email {person.Email} already exists in extent");
+>>>>>>> feat/customexceptions
 
             _allPersons.Add(person);
         }

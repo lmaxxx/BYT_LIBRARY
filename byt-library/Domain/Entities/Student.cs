@@ -21,15 +21,20 @@ public class Student : Person
     public static void AddStudent(Student student)
     {
         if (student == null)
-            throw new ArgumentNullException(nameof(student), "Cannot add null student to extent");
+            throw new StudentIsNullException(nameof(student), "Cannot add null student to extent");
 
         AddPerson(student);
 
         lock (_lockStudent)
         {
+<<<<<<< HEAD
             if (_allStudents.Any(s => s.FirstName.Equals(student.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                       s.LastName.Equals(student.LastName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Student with name {student.FirstName} {student.LastName} already exists in Student extent");
+=======
+            if (_allStudents.Any(s => s.Id == student.Id))
+                throw new StudentAlreadyExistsException($"Student with ID {student.Id} already exists in Student extent");
+>>>>>>> feat/customexceptions
 
             _allStudents.Add(student);
         }

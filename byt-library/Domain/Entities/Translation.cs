@@ -11,19 +11,24 @@ public class Translation
     public static void AddTranslation(Translation translation)
     {
         if (translation == null)
-            throw new ArgumentNullException(nameof(translation), "Cannot add null translation to extent");
+            throw new TranslationIsNullException(nameof(translation), "Cannot add null translation to extent");
 
         lock (_lockTranslation)
         {
             if (string.IsNullOrWhiteSpace(translation.Link))
                 throw new ArgumentException("Link cannot be empty");
 
+<<<<<<< HEAD
             if (string.IsNullOrWhiteSpace(translation.Language))
                 throw new ArgumentException("Language cannot be empty");
 
             if (_allTranslations.Any(t => t.Link.Equals(translation.Link, StringComparison.OrdinalIgnoreCase) &&
                                           t.Language.Equals(translation.Language, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Translation with Link '{translation.Link}' and Language '{translation.Language}' already exists in extent");
+=======
+            if (_allTranslations.Any(t => t.Id == translation.Id))
+                throw new TranslationAlreadyExistsException($"Translation with ID {translation.Id} already exists in extent");
+>>>>>>> feat/customexceptions
 
             _allTranslations.Add(translation);
         }
