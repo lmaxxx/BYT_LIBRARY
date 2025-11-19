@@ -1,41 +1,40 @@
-﻿using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Translation
 {
-    public int Id { get; private set; }
     public string Link { get; set; }
     public string Language { get; set; }
 
     private static List<Translation> _allTranslations = new();
-    private static int _nextId = 1;
     private static readonly object _lockTranslation = new();
 
     public static void AddTranslation(Translation translation)
     {
         if (translation == null)
-            throw new ArgumentNullException(nameof(translation), "Cannot add null translation to extent");
+            throw new TranslationIsNullException(nameof(translation), "Cannot add null translation to extent");
 
         lock (_lockTranslation)
         {
-            if (translation.Id == 0)
-            {
-                translation.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(translation.Link))
+                throw new ArgumentException("Link cannot be empty");
 
             if (_allTranslations.Any(t => t.Id == translation.Id))
-                throw new InvalidOperationException($"Translation with ID {translation.Id} already exists in extent");
+                throw new TranslationAlreadyExistsException($"Translation with ID {translation.Id} already exists in extent");
+
+            if (_allTranslations.Any(t => t.Link.Equals(translation.Link, StringComparison.OrdinalIgnoreCase) &&
+                                          t.Language.Equals(translation.Language, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Translation with Link '{translation.Link}' and Language '{translation.Language}' already exists in extent");
 
             _allTranslations.Add(translation);
         }
     }
 
-    public static bool RemoveTranslation(int id)
+    public static bool RemoveTranslation(string link, string language)
     {
         lock (_lockTranslation)
         {
-            var translation = _allTranslations.FirstOrDefault(t => t.Id == id);
+            var translation = _allTranslations.FirstOrDefault(t => t.Link.Equals(link, StringComparison.OrdinalIgnoreCase) &&
+                                                                    t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
             if (translation != null)
             {
                 return _allTranslations.Remove(translation);
@@ -44,11 +43,12 @@ public class Translation
         }
     }
 
-    public static Translation? GetTranslationById(int id)
+    public static Translation? GetTranslation(string link, string language)
     {
         lock (_lockTranslation)
         {
-            return _allTranslations.FirstOrDefault(t => t.Id == id);
+            return _allTranslations.FirstOrDefault(t => t.Link.Equals(link, StringComparison.OrdinalIgnoreCase) &&
+                                                        t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -60,62 +60,11 @@ public class Translation
         }
     }
 
-    public static int GetTranslationCount()
-    {
-        lock (_lockTranslation)
-        {
-            return _allTranslations.Count;
-        }
-    }
-
     public static void ClearTranslationExtent()
     {
         lock (_lockTranslation)
         {
             _allTranslations.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SaveTranslationsToFile(string filePath)
-    {
-        lock (_lockTranslation)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allTranslations, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadTranslationsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockTranslation)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var translationList = JsonSerializer.Deserialize<List<Translation>>(json, options);
-
-            if (translationList != null)
-            {
-                ClearTranslationExtent();
-
-                foreach (var translation in translationList)
-                {
-                    AddTranslation(translation);
-                }
-            }
         }
     }
 }

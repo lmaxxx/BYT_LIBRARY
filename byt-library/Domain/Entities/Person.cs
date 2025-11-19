@@ -1,10 +1,7 @@
-using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Person
 {
-    public int Id { get; private set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
     public string? Email { get; set; }
@@ -27,55 +24,44 @@ public class Person
     }
 
     private static List<Person> _allPersons = new();
-    private static int _nextId = 1;
     private static readonly object _lock = new();
 
-    public Person(string firstName, string lastName, DateTime dateOfBirth, string? email = null, int id = 0)
+    public Person(string firstName, string lastName, DateTime dateOfBirth, string? email = null)
     {
         FirstName = firstName;
         LastName = lastName;
-        DateOfBirth = dateOfBirth;
         Email = email;
-
-        if (id > 0)
-        {
-            Id = id;
-            lock (_lock)
-            {
-                if (id >= _nextId)
-                    _nextId = id + 1;
-            }
-        }
+        DateOfBirth = dateOfBirth;
     }
 
     public static void AddPerson(Person person)
     {
         if (person == null)
-            throw new ArgumentNullException(nameof(person), "Cannot add null person to extent");
+            throw new PersonIsNullException(nameof(person), "Cannot add null person to extent");
 
         lock (_lock)
         {
-            if (person.Id == 0)
-            {
-                person.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(person.FirstName))
+                throw new ArgumentException("Person first name cannot be empty");
 
-            if (_allPersons.Any(p => p.Id == person.Id))
-                throw new InvalidOperationException($"Person with ID {person.Id} already exists in extent");
+            if (string.IsNullOrWhiteSpace(person.LastName))
+                throw new ArgumentException("Person last name cannot be empty");
 
-            if (!string.IsNullOrWhiteSpace(person.Email) &&
-                _allPersons.Any(p => p.Email != null && p.Email.Equals(person.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Person with email {person.Email} already exists in extent");
+            if (_allPersons.Any(p => p.FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                                     p.LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Person with name {person.FirstName} {person.LastName} already exists in extent");
 
             _allPersons.Add(person);
         }
     }
 
-    public static bool RemovePerson(int id)
+    public static bool RemovePerson(string firstName, string lastName)
     {
         lock (_lock)
         {
-            var person = _allPersons.FirstOrDefault(p => p.Id == id);
+            var person = _allPersons.FirstOrDefault(p =>
+                p.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (person != null)
             {
                 return _allPersons.Remove(person);
@@ -84,11 +70,13 @@ public class Person
         }
     }
 
-    public static Person? GetPersonById(int id)
+    public static Person? GetPersonByName(string firstName, string lastName)
     {
         lock (_lock)
         {
-            return _allPersons.FirstOrDefault(p => p.Id == id);
+            return _allPersons.FirstOrDefault(p =>
+                p.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -100,69 +88,17 @@ public class Person
         }
     }
 
-    public static int GetPersonCount()
-    {
-        lock (_lock)
-        {
-            return _allPersons.Count;
-        }
-    }
-
     public static void ClearExtent()
     {
         lock (_lock)
         {
             _allPersons.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SaveToFile(string filePath)
-    {
-        lock (_lock)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allPersons, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lock)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var persons = JsonSerializer.Deserialize<List<Person>>(json, options);
-
-            if (persons != null)
-            {
-                _allPersons.Clear();
-                _nextId = 1;
-
-                foreach (var person in persons)
-                {
-                    AddPerson(person);
-                }
-            }
         }
     }
 
     public override string ToString()
     {
-        return $"[{Id}] {FirstName} {LastName} (Age: {Age})" +
-               (Email != null ? $" - {Email}" : "");
+        var emailPart = string.IsNullOrWhiteSpace(Email) ? "No email" : Email;
+        return $"{FirstName} {LastName} (Age: {Age}) - {emailPart}";
     }
 }

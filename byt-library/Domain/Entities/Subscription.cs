@@ -1,21 +1,19 @@
-﻿using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Subscription
 {
-    public int Id { get; private set; }
+    public string SubscriptionCode { get; private set; } = string.Empty;
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
 
     private static List<Subscription> _allSubscriptions = new();
-    private static int _nextId = 1;
     private static readonly object _lockSubscription = new();
 
     public Subscription() { }
 
     public Subscription(DateTime startDate, DateTime endDate)
     {
+        SubscriptionCode = $"SUB-{Guid.NewGuid()}";
         StartDate = startDate;
         EndDate = endDate;
     }
@@ -38,27 +36,25 @@ public class Subscription
     public static void AddSubscription(Subscription subscription)
     {
         if (subscription == null)
-            throw new ArgumentNullException(nameof(subscription), "Cannot add null subscription to extent");
+            throw new SubscriptionIsNullException(nameof(subscription), "Cannot add null subscription to extent");
 
         lock (_lockSubscription)
         {
-            if (subscription.Id == 0)
-            {
-                subscription.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(subscription.SubscriptionCode))
+                throw new ArgumentException("SubscriptionCode cannot be empty");
 
             if (_allSubscriptions.Any(s => s.Id == subscription.Id))
-                throw new InvalidOperationException($"Subscription with ID {subscription.Id} already exists in extent");
+                throw new SubscriptionAlreadyExistsException($"Subscription with ID {subscription.Id} already exists in extent");
 
             _allSubscriptions.Add(subscription);
         }
     }
 
-    public static bool RemoveSubscription(int id)
+    public static bool RemoveSubscription(string subscriptionCode)
     {
         lock (_lockSubscription)
         {
-            var subscription = _allSubscriptions.FirstOrDefault(s => s.Id == id);
+            var subscription = _allSubscriptions.FirstOrDefault(s => s.SubscriptionCode.Equals(subscriptionCode, StringComparison.OrdinalIgnoreCase));
             if (subscription != null)
             {
                 return _allSubscriptions.Remove(subscription);
@@ -67,11 +63,11 @@ public class Subscription
         }
     }
 
-    public static Subscription? GetSubscriptionById(int id)
+    public static Subscription? GetSubscriptionByCode(string subscriptionCode)
     {
         lock (_lockSubscription)
         {
-            return _allSubscriptions.FirstOrDefault(s => s.Id == id);
+            return _allSubscriptions.FirstOrDefault(s => s.SubscriptionCode.Equals(subscriptionCode, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -83,62 +79,11 @@ public class Subscription
         }
     }
 
-    public static int GetSubscriptionCount()
-    {
-        lock (_lockSubscription)
-        {
-            return _allSubscriptions.Count;
-        }
-    }
-
     public static void ClearSubscriptionExtent()
     {
         lock (_lockSubscription)
         {
             _allSubscriptions.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SaveSubscriptionsToFile(string filePath)
-    {
-        lock (_lockSubscription)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allSubscriptions, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadSubscriptionsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockSubscription)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var subscriptionList = JsonSerializer.Deserialize<List<Subscription>>(json, options);
-
-            if (subscriptionList != null)
-            {
-                ClearSubscriptionExtent();
-
-                foreach (var subscription in subscriptionList)
-                {
-                    AddSubscription(subscription);
-                }
-            }
         }
     }
 }

@@ -1,16 +1,15 @@
-﻿using byt_library.Domain.Enums;
-using System.Text.Json;
+using byt_library.Domain.Enums;
 
 namespace byt_library.Domain.Entities;
 
 public class BorrowRecord
 {
-    public int Id { get; private set; }
     public DateTime BorrowDate { get; set; }
     public DateTime DueDate { get; set; }
     public DateTime? ReturnDate { get; set; }
     public BorrowRecordStatus Status { get; set; }
-    
+    public string BorrowCode { get; set; }
+
     public BorrowRecord(int borrowDays = 30)
     {
         BorrowDate = DateTime.Now;
@@ -19,7 +18,7 @@ public class BorrowRecord
         ReturnDate = null;
         GenerateBorrowCode();
     }
-    
+
     public double FineAmount
     {
         get
@@ -28,13 +27,11 @@ public class BorrowRecord
                 return 0;
 
             double lateDays = (ReturnDate.Value - DueDate).Days;
-            return lateDays; // 1$ per day
+            return lateDays;
         }
     }
-    public string BorrowCode { get; set; }
 
     private static List<BorrowRecord> _allBorrowRecords = new();
-    private static int _nextId = 1;
     private static readonly object _lockBorrowRecord = new();
 
     public double CalculateFine()
@@ -49,7 +46,7 @@ public class BorrowRecord
     public void CancelBorrowRecordRequest()
     {
         if (Status == BorrowRecordStatus.Ongoing)
-            throw new InvalidOperationException("Cannot cancel an active borrow record.");
+            throw new CancelationActiveBorrowRecordException("Cannot cancel an active borrow record");
 
         Status = BorrowRecordStatus.Canceled;
     }
@@ -72,7 +69,7 @@ public class BorrowRecord
     public void ReturnBorrowRecord()
     {
         if (Status != BorrowRecordStatus.Ongoing)
-            throw new InvalidOperationException("Borrow record is not active.");
+            throw new BorrowRecordIsInactiveException("Borrow record is not active");
 
         ReturnDate = DateTime.Now;
         Status = BorrowRecordStatus.Returned;
@@ -88,27 +85,25 @@ public class BorrowRecord
     public static void AddBorrowRecord(BorrowRecord borrowRecord)
     {
         if (borrowRecord == null)
-            throw new ArgumentNullException(nameof(borrowRecord), "Cannot add null borrow record to extent");
+            throw new BorrowRecordIsNullException(nameof(borrowRecord), "Cannot add null borrow record to extent");
 
         lock (_lockBorrowRecord)
         {
-            if (borrowRecord.Id == 0)
-            {
-                borrowRecord.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(borrowRecord.BorrowCode))
+                throw new ArgumentException("BorrowCode cannot be empty");
 
             if (_allBorrowRecords.Any(br => br.Id == borrowRecord.Id))
-                throw new InvalidOperationException($"BorrowRecord with ID {borrowRecord.Id} already exists in extent");
+                throw new BorrowRecordAlreadyExistsException($"BorrowRecord with ID {borrowRecord.Id} already exists in extent");
 
             _allBorrowRecords.Add(borrowRecord);
         }
     }
 
-    public static bool RemoveBorrowRecord(int id)
+    public static bool RemoveBorrowRecord(string borrowCode)
     {
         lock (_lockBorrowRecord)
         {
-            var borrowRecord = _allBorrowRecords.FirstOrDefault(br => br.Id == id);
+            var borrowRecord = _allBorrowRecords.FirstOrDefault(br => br.BorrowCode.Equals(borrowCode, StringComparison.OrdinalIgnoreCase));
             if (borrowRecord != null)
             {
                 return _allBorrowRecords.Remove(borrowRecord);
@@ -117,11 +112,11 @@ public class BorrowRecord
         }
     }
 
-    public static BorrowRecord? GetBorrowRecordById(int id)
+    public static BorrowRecord? GetBorrowRecordByCode(string borrowCode)
     {
         lock (_lockBorrowRecord)
         {
-            return _allBorrowRecords.FirstOrDefault(br => br.Id == id);
+            return _allBorrowRecords.FirstOrDefault(br => br.BorrowCode.Equals(borrowCode, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -133,62 +128,11 @@ public class BorrowRecord
         }
     }
 
-    public static int GetBorrowRecordCount()
-    {
-        lock (_lockBorrowRecord)
-        {
-            return _allBorrowRecords.Count;
-        }
-    }
-
     public static void ClearBorrowRecordExtent()
     {
         lock (_lockBorrowRecord)
         {
             _allBorrowRecords.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SaveBorrowRecordsToFile(string filePath)
-    {
-        lock (_lockBorrowRecord)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allBorrowRecords, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadBorrowRecordsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockBorrowRecord)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var borrowRecordList = JsonSerializer.Deserialize<List<BorrowRecord>>(json, options);
-
-            if (borrowRecordList != null)
-            {
-                ClearBorrowRecordExtent();
-
-                foreach (var borrowRecord in borrowRecordList)
-                {
-                    AddBorrowRecord(borrowRecord);
-                }
-            }
         }
     }
 }

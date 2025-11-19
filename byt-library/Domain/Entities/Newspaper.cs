@@ -1,25 +1,10 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Interfaces;
 
-using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Newspaper : IPrintedResource
 {
-    private static List<Newspaper> Newspapers = new List<Newspaper>();
-
-    public Newspaper(string publisher, string title, string description, CoverType coverType, int quantity)
-    {
-        Publisher = publisher;
-        Title = title;
-        Description = description;
-        CoverType = coverType;
-        Quantity = quantity;
-        Newspapers.Add(this);
-    }
-    
-    public int Id { get; private set; }
     public string Publisher { get; set; }
     public required string Title { get; set; }
     public required string Description { get; set; }
@@ -27,33 +12,34 @@ public class Newspaper : IPrintedResource
     public int Quantity { get; set; }
 
     private static List<Newspaper> _allNewspapers = new();
-    private static int _nextId = 1;
     private static readonly object _lockNewspaper = new();
 
     public static void AddNewspaper(Newspaper newspaper)
     {
         if (newspaper == null)
-            throw new ArgumentNullException(nameof(newspaper), "Cannot add null newspaper to extent");
+            throw new NewspaperIsNullException(nameof(newspaper), "Cannot add null newspaper to extent");
 
         lock (_lockNewspaper)
         {
-            if (newspaper.Id == 0)
-            {
-                newspaper.Id = _nextId++;
-            }
+            if (string.IsNullOrWhiteSpace(newspaper.Title))
+                throw new ArgumentException("Title cannot be empty");
+
+            if (string.IsNullOrWhiteSpace(newspaper.Publisher))
+                throw new ArgumentException("Publisher cannot be empty");
 
             if (_allNewspapers.Any(n => n.Id == newspaper.Id))
-                throw new InvalidOperationException($"Newspaper with ID {newspaper.Id} already exists in extent");
+                throw new NewspaperAlreadyExistsException($"Newspaper with ID {newspaper.Id} already exists in extent");
 
             _allNewspapers.Add(newspaper);
         }
     }
 
-    public static bool RemoveNewspaper(int id)
+    public static bool RemoveNewspaper(string title, string publisher)
     {
         lock (_lockNewspaper)
         {
-            var newspaper = _allNewspapers.FirstOrDefault(n => n.Id == id);
+            var newspaper = _allNewspapers.FirstOrDefault(n => n.Title.Equals(title, StringComparison.OrdinalIgnoreCase) &&
+                                                                n.Publisher.Equals(publisher, StringComparison.OrdinalIgnoreCase));
             if (newspaper != null)
             {
                 return _allNewspapers.Remove(newspaper);
@@ -62,11 +48,12 @@ public class Newspaper : IPrintedResource
         }
     }
 
-    public static Newspaper? GetNewspaperById(int id)
+    public static Newspaper? GetNewspaper(string title, string publisher)
     {
         lock (_lockNewspaper)
         {
-            return _allNewspapers.FirstOrDefault(n => n.Id == id);
+            return _allNewspapers.FirstOrDefault(n => n.Title.Equals(title, StringComparison.OrdinalIgnoreCase) &&
+                                                      n.Publisher.Equals(publisher, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -78,62 +65,11 @@ public class Newspaper : IPrintedResource
         }
     }
 
-    public static int GetNewspaperCount()
-    {
-        lock (_lockNewspaper)
-        {
-            return _allNewspapers.Count;
-        }
-    }
-
     public static void ClearNewspaperExtent()
     {
         lock (_lockNewspaper)
         {
             _allNewspapers.Clear();
-            _nextId = 1;
-        }
-    }
-
-    public static void SaveNewspapersToFile(string filePath)
-    {
-        lock (_lockNewspaper)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allNewspapers, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-
-    public static void LoadNewspapersFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockNewspaper)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var newspaperList = JsonSerializer.Deserialize<List<Newspaper>>(json, options);
-
-            if (newspaperList != null)
-            {
-                ClearNewspaperExtent();
-
-                foreach (var newspaper in newspaperList)
-                {
-                    AddNewspaper(newspaper);
-                }
-            }
         }
     }
 }

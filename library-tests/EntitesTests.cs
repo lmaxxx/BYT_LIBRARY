@@ -192,51 +192,13 @@ public class EntitiesTests
     }
 
     [Test]
-    public void Book_AddBook_WithValidProperties_CreatesValidInstance()
-    {
-        var book = new Book(
-            ISBN: "978-3-16-148410-0",
-            hasAudio: true,
-            title: "Clean Code",
-            description: "A Handbook of Agile Software Craftsmanship",
-            coverType: CoverType.Hard,
-            quantity: 5,
-            size: 464,
-            link: "https://example.com/clean-code"
-        )
-        {
-            Title = "Clean Code",
-            Description = "A Handbook of Agile Software Craftsmanship",
-            Link = "https://example.com/clean-code",
-            CoverType = CoverType.Hard,
-            Translations = new List<Translation>()
-        };
-
-        Book.AddBook(book);
-
-        Assert.That(Book.GetBookCount(), Is.EqualTo(1), "Book should be added to extent");
-        var retrievedBook = Book.GetBookById(book.Id);
-        Assert.That(retrievedBook, Is.Not.Null, "Book should be retrievable by ID");
-        Assert.That(retrievedBook!.Title, Is.EqualTo("Clean Code"), "Title should match");
-        Assert.That(retrievedBook.HasAudio, Is.True, "HasAudio property should be set");
-        Assert.That(retrievedBook.Quantity, Is.EqualTo(5), "Quantity should be 5");
-        Assert.That(retrievedBook.Id, Is.GreaterThan(0), "ID should be auto-generated");
-    }
-
-    [Test]
     public void IDigitalResource_AddTranslation_WithLanguage_ThrowsNotSupportedExceptionWhenExpected()
     {
-        IDigitalResource book = new Book(
-            ISBN: "978-3-16-148410-0",
-            hasAudio: true,
-            title: "Clean Code",
-            description: "A Handbook of Agile Software Craftsmanship",
-            coverType: CoverType.Hard,
-            quantity: 5,
-            size: 464,
-            link: "https://example.com/clean-code"
-        )
-        {
+        IDigitalResource book = new Book{
+            ISBN = "978-3-16-148410-0",
+            HasAudio = true,
+            Quantity = 5,
+            Size = 464,
             Title = "Clean Code",
             Description = "A Handbook of Agile Software Craftsmanship",
             Link = "https://example.com/clean-code",

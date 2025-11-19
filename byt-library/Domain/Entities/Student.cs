@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace byt_library.Domain.Entities;
 
 public class Student : Person
@@ -9,8 +7,8 @@ public class Student : Person
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
 
-    public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null, int id = 0)
-        : base(firstName, lastName, dateOfBirth, email, id)
+    public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null)
+        : base(firstName, lastName, dateOfBirth, email)
     {
         EnrollmentDate = enrollmentDate;
     }
@@ -23,39 +21,43 @@ public class Student : Person
     public static void AddStudent(Student student)
     {
         if (student == null)
-            throw new ArgumentNullException(nameof(student), "Cannot add null student to extent");
+            throw new StudentIsNullException(nameof(student), "Cannot add null student to extent");
 
         AddPerson(student);
 
         lock (_lockStudent)
         {
             if (_allStudents.Any(s => s.Id == student.Id))
-                throw new InvalidOperationException($"Student with ID {student.Id} already exists in Student extent");
+                throw new StudentAlreadyExistsException($"Student with ID {student.Id} already exists in Student extent");
 
             _allStudents.Add(student);
         }
     }
-    
-    public static bool RemoveStudent(int id)
+
+    public static bool RemoveStudent(string firstName, string lastName)
     {
         lock (_lockStudent)
         {
-            var student = _allStudents.FirstOrDefault(s => s.Id == id);
+            var student = _allStudents.FirstOrDefault(s =>
+                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (student != null)
             {
                 _allStudents.Remove(student);
-                RemovePerson(id);
+                RemovePerson(firstName, lastName);
                 return true;
             }
             return false;
         }
     }
-    
-    public static Student? GetStudentById(int id)
+
+    public static Student? GetStudentByName(string firstName, string lastName)
     {
         lock (_lockStudent)
         {
-            return _allStudents.FirstOrDefault(s => s.Id == id);
+            return _allStudents.FirstOrDefault(s =>
+                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
     
@@ -86,66 +88,16 @@ public class Student : Person
                               .AsReadOnly();
         }
     }
-    
-    public static int GetStudentCount()
-    {
-        lock (_lockStudent)
-        {
-            return _allStudents.Count;
-        }
-    }
-    
+
     public static void ClearStudentExtent()
     {
         lock (_lockStudent)
         {
             foreach (var student in _allStudents.ToList())
             {
-                RemovePerson(student.Id);
+                RemovePerson(student.FirstName, student.LastName);
             }
             _allStudents.Clear();
-        }
-    }
-    
-    public static void SaveStudentsToFile(string filePath)
-    {
-        lock (_lockStudent)
-        {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true
-            };
-
-            var json = JsonSerializer.Serialize(_allStudents, options);
-            File.WriteAllText(filePath, json);
-        }
-    }
-    
-    public static void LoadStudentsFromFile(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        lock (_lockStudent)
-        {
-            var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var studentList = JsonSerializer.Deserialize<List<Student>>(json, options);
-
-            if (studentList != null)
-            {
-                ClearStudentExtent();
-
-                foreach (var student in studentList)
-                {
-                    AddStudent(student);
-                }
-            }
         }
     }
 
