@@ -22,14 +22,8 @@ public class Staff : Person
 
         lock (_lockStaff)
         {
-<<<<<<< HEAD
-            if (_allStaff.Any(s => s.FirstName.Equals(staff.FirstName, StringComparison.OrdinalIgnoreCase) &&
-                                   s.LastName.Equals(staff.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Staff with name {staff.FirstName} {staff.LastName} already exists in Staff extent");
-=======
             if (_allStaff.Any(s => s.Id == staff.Id))
                 throw new StaffAlreadyExistsException($"Staff with ID {staff.Id} already exists in Staff extent");
->>>>>>> feat/customexceptions
 
             _allStaff.Add(staff);
         }

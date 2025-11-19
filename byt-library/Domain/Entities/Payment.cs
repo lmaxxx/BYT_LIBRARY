@@ -48,13 +48,8 @@ public class Payment
             if (string.IsNullOrWhiteSpace(payment.PaymentCode))
                 throw new ArgumentException("PaymentCode cannot be empty");
 
-<<<<<<< HEAD
-            if (_allPayments.Any(p => p.PaymentCode.Equals(payment.PaymentCode, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Payment with code {payment.PaymentCode} already exists in extent");
-=======
             if (_allPayments.Any(p => p.Id == payment.Id))
                 throw new PaymentAlreadyExistsException($"Payment with ID {payment.Id} already exists in extent");
->>>>>>> feat/customexceptions
 
             _allPayments.Add(payment);
         }

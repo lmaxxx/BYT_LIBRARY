@@ -17,13 +17,8 @@ public class OnlineMagazine
             if (string.IsNullOrWhiteSpace(onlineMagazine.PageLink))
                 throw new ArgumentException("PageLink cannot be empty");
 
-<<<<<<< HEAD
-            if (_allOnlineMagazines.Any(om => om.PageLink.Equals(onlineMagazine.PageLink, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"OnlineMagazine with PageLink {onlineMagazine.PageLink} already exists in extent");
-=======
             if (_allOnlineMaganizes.Any(om => om.Id == onlineMagazine.Id))
                 throw new MagazineAlreadyExistsException($"OnlineMaganize with ID {onlineMagazine.Id} already exists in extent");
->>>>>>> feat/customexceptions
 
             _allOnlineMagazines.Add(onlineMagazine);
         }

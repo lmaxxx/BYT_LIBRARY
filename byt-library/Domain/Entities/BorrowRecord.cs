@@ -92,13 +92,8 @@ public class BorrowRecord
             if (string.IsNullOrWhiteSpace(borrowRecord.BorrowCode))
                 throw new ArgumentException("BorrowCode cannot be empty");
 
-<<<<<<< HEAD
-            if (_allBorrowRecords.Any(br => br.BorrowCode.Equals(borrowRecord.BorrowCode, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"BorrowRecord with code {borrowRecord.BorrowCode} already exists in extent");
-=======
             if (_allBorrowRecords.Any(br => br.Id == borrowRecord.Id))
                 throw new BorrowRecordAlreadyExistsException($"BorrowRecord with ID {borrowRecord.Id} already exists in extent");
->>>>>>> feat/customexceptions
 
             _allBorrowRecords.Add(borrowRecord);
         }

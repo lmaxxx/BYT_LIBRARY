@@ -36,13 +36,8 @@ public class Catalog
             if (string.IsNullOrWhiteSpace(catalog.Name))
                 throw new ArgumentException("Catalog name cannot be empty");
 
-<<<<<<< HEAD
-            if (_allCatalogs.Any(c => c.Name.Equals(catalog.Name, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Catalog with name {catalog.Name} already exists in extent");
-=======
             if (_allCatalogs.Any(c => c.Id == catalog.Id))
                 throw new CatalogAlreadyExistsException($"Catalog with ID {catalog.Id} already exists in extent");
->>>>>>> feat/customexceptions
 
             _allCatalogs.Add(catalog);
         }
