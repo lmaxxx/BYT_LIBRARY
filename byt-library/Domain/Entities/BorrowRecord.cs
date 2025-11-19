@@ -46,7 +46,7 @@ public class BorrowRecord
     public void CancelBorrowRecordRequest()
     {
         if (Status == BorrowRecordStatus.Ongoing)
-            throw new InvalidOperationException("Cannot cancel an active borrow record.");
+            throw new BorrowRecordIsActiveException("Cannot cancel an active borrow record.");
 
         Status = BorrowRecordStatus.Canceled;
     }
@@ -69,7 +69,7 @@ public class BorrowRecord
     public void ReturnBorrowRecord()
     {
         if (Status != BorrowRecordStatus.Ongoing)
-            throw new InvalidOperationException("Borrow record is not active.");
+            throw new BorrowRecordIsInactiveException("Borrow record is not active.");
 
         ReturnDate = DateTime.Now;
         Status = BorrowRecordStatus.Returned;
@@ -85,15 +85,15 @@ public class BorrowRecord
     public static void AddBorrowRecord(BorrowRecord borrowRecord)
     {
         if (borrowRecord == null)
-            throw new ArgumentNullException(nameof(borrowRecord), "Cannot add null borrow record to extent");
+            throw new BorrowRecordIsNullException(nameof(borrowRecord), "Cannot add null borrow record to extent");
 
         lock (_lockBorrowRecord)
         {
             if (string.IsNullOrWhiteSpace(borrowRecord.BorrowCode))
-                throw new ArgumentException("BorrowCode cannot be empty");
+                throw new BorrowCodeIsEmptyException("BorrowCode cannot be empty");
 
             if (_allBorrowRecords.Any(br => br.BorrowCode.Equals(borrowRecord.BorrowCode, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"BorrowRecord with code {borrowRecord.BorrowCode} already exists in extent");
+                throw new BorrowRecordAlreadyExistsException($"BorrowRecord with code {borrowRecord.BorrowCode} already exists in extent");
 
             _allBorrowRecords.Add(borrowRecord);
         }
