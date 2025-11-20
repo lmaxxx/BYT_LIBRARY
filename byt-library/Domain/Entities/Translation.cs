@@ -11,15 +11,15 @@ public class Translation
     public static void AddTranslation(Translation translation)
     {
         if (translation == null)
-            throw new ArgumentNullException(nameof(translation), "Cannot add null translation to extent");
+            throw new TranslationIsNullException(nameof(translation), "Cannot add null translation to extent");
 
         lock (_lockTranslation)
         {
             if (string.IsNullOrWhiteSpace(translation.Link))
-                throw new ArgumentException("Link cannot be empty");
+                throw new LinkIsEmptyException("Link cannot be empty");
 
             if (string.IsNullOrWhiteSpace(translation.Language))
-                throw new ArgumentException("Language cannot be empty");
+                throw new TranslationAlreadyExistsException("Language cannot be empty");
 
             if (_allTranslations.Any(t => t.Link.Equals(translation.Link, StringComparison.OrdinalIgnoreCase) &&
                                           t.Language.Equals(translation.Language, StringComparison.OrdinalIgnoreCase)))

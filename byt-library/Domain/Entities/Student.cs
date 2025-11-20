@@ -21,7 +21,7 @@ public class Student : Person
     public static void AddStudent(Student student)
     {
         if (student == null)
-            throw new ArgumentNullException(nameof(student), "Cannot add null student to extent");
+            throw new StudentIsNullException(nameof(student), "Cannot add null student to extent");
 
         AddPerson(student);
 
@@ -29,7 +29,7 @@ public class Student : Person
         {
             if (_allStudents.Any(s => s.FirstName.Equals(student.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                       s.LastName.Equals(student.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Student with name {student.FirstName} {student.LastName} already exists in Student extent");
+                throw new StudentAlreadyExistsException($"Student with name {student.FirstName} {student.LastName} already exists in Student extent");
 
             _allStudents.Add(student);
         }

@@ -16,7 +16,7 @@ public class Author : Person
     public static void AddAuthor(Author author)
     {
         if (author == null)
-            throw new ArgumentNullException(nameof(author), "Cannot add null author to extent");
+            throw new AuthorIsNullException(nameof(author), "Cannot add null author to extent");
 
         AddPerson(author);
 
@@ -24,11 +24,11 @@ public class Author : Person
         {
             if (_allAuthors.Any(a => a.FirstName.Equals(author.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                      a.LastName.Equals(author.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Author with name {author.FirstName} {author.LastName} already exists in Author extent");
+                throw new AuthorWithSuchNameAlreadyExistsException($"Author with name {author.FirstName} {author.LastName} already exists in Author extent");
 
             if (!string.IsNullOrWhiteSpace(author.Nickname) &&
                 _allAuthors.Any(a => a.Nickname != null && a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Author with nickname '{author.Nickname}' already exists in Author extent");
+                throw new AuthorWithSuchNicknameAlreadyExistsException($"Author with nickname '{author.Nickname}' already exists in Author extent");
 
             _allAuthors.Add(author);
         }

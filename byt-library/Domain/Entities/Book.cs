@@ -21,15 +21,15 @@ public class Book : IDigitalResource, IPrintedResource
     public static void AddBook(Book book)
     {
         if (book == null)
-            throw new ArgumentNullException(nameof(book), "Cannot add null book to extent");
+            throw new BookIsNullException(nameof(book), "Cannot add null book to extent");
 
         lock (_lockBook)
         {
             if (string.IsNullOrWhiteSpace(book.ISBN))
-                throw new ArgumentException("Book ISBN cannot be empty");
+                throw new BookISBNIsEmptyException("Book ISBN cannot be empty");
 
             if (_allBooks.Any(b => b.ISBN.Equals(book.ISBN, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Book with ISBN {book.ISBN} already exists in extent");
+                throw new BookAlreadyExistsException($"Book with ISBN {book.ISBN} already exists in extent");
 
             _allBooks.Add(book);
         }
