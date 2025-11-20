@@ -7,6 +7,7 @@ public class Translation
 
     private static List<Translation> _allTranslations = new();
     private static readonly object _lockTranslation = new();
+    public static readonly List<string> _supportedLanguages = ["polish", "english", "ukrainian"];
 
     public static void AddTranslation(Translation translation)
     {

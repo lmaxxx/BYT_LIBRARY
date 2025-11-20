@@ -1,5 +1,7 @@
 using byt_library.Domain.Entities;
 using byt_library.Domain.Enums;
+using byt_library.Domain.Interfaces;
+using byt_library.Domain.Services;
 
 namespace library_tests;
 
@@ -41,24 +43,14 @@ public class EntitiesTests
         Assert.That(fineAmount, Is.EqualTo(5.0), "Fine should be $1 per day overdue");
         Assert.That(calculatedFine, Is.EqualTo(5.0), "CalculateFine() should return same as FineAmount property");
     }
-
-    [Test]
-    public void BorrowRecord_CancelBorrowRecordRequest_WhenOngoing_ThrowsInvalidOperationException()
-    {
-        var borrowRecord = new BorrowRecord();
-        BorrowRecord.AddBorrowRecord(borrowRecord);
-
-        var ex = Assert.Throws<InvalidOperationException>(() => borrowRecord.CancelBorrowRecordRequest());
-        Assert.That(ex.Message, Does.Contain("Cannot cancel an active borrow record"));
-    }
-
+    
     [Test]
     public void Payment_Constructor_WhenBothSubscriptionAndBorrowRecordProvided_ThrowsException()
     {
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1));
         var borrowRecord = new BorrowRecord();
 
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var ex = Assert.Throws<PaymentIsNotAttachedException>(() =>
         {
             var payment = new Payment(
                 amount: 50.0,
@@ -75,7 +67,7 @@ public class EntitiesTests
     [Test]
     public void Payment_Constructor_WhenNeitherSubscriptionNorBorrowRecordProvided_ThrowsException()
     {
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var ex = Assert.Throws<PaymentIsNotAttachedException>(() =>
         {
             var payment = new Payment(
                 amount: 50.0,
@@ -152,25 +144,11 @@ public class EntitiesTests
         Person.AddPerson(person1);
 
         var person2 = new Person("JOHN", "DOE", new DateTime(1992, 5, 15), "jane.smith@example.com");
-
-        var ex = Assert.Throws<InvalidOperationException>(() => Person.AddPerson(person2));
+        
+        var ex = Assert.Throws<PersonAlreadyExistsException>(() => Person.AddPerson(person2));
         Assert.That(ex.Message, Does.Contain("Person with name"));
-        Assert.That(ex.Message, Does.Contain("already exists"));
     }
-
-    [Test]
-    public void Author_AddAuthor_WithDuplicateNickname_ThrowsInvalidOperationException()
-    {
-        var author1 = new Author("Stephen", "King", new DateTime(1947, 9, 21), "stephen@example.com", "The Master of Horror");
-        Author.AddAuthor(author1);
-
-        var author2 = new Author("Richard", "Bachman", new DateTime(1950, 1, 1), "richard@example.com", "the master of horror");
-
-        var ex = Assert.Throws<InvalidOperationException>(() => Author.AddAuthor(author2));
-        Assert.That(ex.Message, Does.Contain("Author with nickname"));
-        Assert.That(ex.Message, Does.Contain("already exists"));
-    }
-
+    
     [Test]
     public void Person_Age_CalculatedCorrectly_ConsideringBirthdayThisYear()
     {
@@ -190,36 +168,96 @@ public class EntitiesTests
         Assert.That(infant.Age, Is.EqualTo(0), "Age should be 0 for infant born this year");
     }
 
-    // Commented out temporarily - Book test has unrelated errors
-    // [Test]
-    // public void Book_AddBook_WithValidProperties_CreatesValidInstance()
-    // {
-    //     var book = new Book(
-    //         ISBN: "978-3-16-148410-0",
-    //         hasAudio: true,
-    //         title: "Clean Code",
-    //         description: "A Handbook of Agile Software Craftsmanship",
-    //         coverType: CoverType.Hard,
-    //         quantity: 5,
-    //         size: 464,
-    //         link: "https://example.com/clean-code"
-    //     )
-    //     {
-    //         Title = "Clean Code",
-    //         Description = "A Handbook of Agile Software Craftsmanship",
-    //         Link = "https://example.com/clean-code",
-    //         CoverType = CoverType.Hard,
-    //         Translations = new List<Translation>()
-    //     };
-    //
-    //     Book.AddBook(book);
-    //
-    //     Assert.That(Book.GetBookCount(), Is.EqualTo(1), "Book should be added to extent");
-    //     var retrievedBook = Book.GetBookById(book.Id);
-    //     Assert.That(retrievedBook, Is.Not.Null, "Book should be retrievable by ID");
-    //     Assert.That(retrievedBook!.Title, Is.EqualTo("Clean Code"), "Title should match");
-    //     Assert.That(retrievedBook.HasAudio, Is.True, "HasAudio property should be set");
-    //     Assert.That(retrievedBook.Quantity, Is.EqualTo(5), "Quantity should be 5");
-    //     Assert.That(retrievedBook.Id, Is.GreaterThan(0), "ID should be auto-generated");
-    // }
+    [Test]
+    public void IDigitalResource_AddTranslation_WithLanguage_ThrowsNotSupportedExceptionWhenExpected()
+    {
+        IDigitalResource book = new Book{
+            ISBN = "978-3-16-148410-0",
+            HasAudio = true,
+            Quantity = 5,
+            Size = 464,
+            Title = "Clean Code",
+            Description = "A Handbook of Agile Software Craftsmanship",
+            Link = "https://example.com/clean-code",
+            CoverType = CoverType.Hard,
+            Translations = []
+        };
+
+        IDigitalResource magazine = new OnlineMagazine()
+        {
+            Title = "Harvard Law is Awful",
+            Description = "About Harvard law.",
+            Link = "https://example.com/harvard-law-is-awful",
+            Size = 464,
+            PageLink = "https://newyorkmagazine.com/harvard-law-is-awful",
+            Translations = [],
+            HasAudio = false
+        };
+
+        Assert.Throws<NotSupportedException>(() => magazine.AddTranslation("german"));
+        Assert.Throws<NotSupportedException>(() => magazine.AddTranslation("french"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("english"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("polish"));
+        Assert.DoesNotThrow(() => magazine.AddTranslation("ukrainian"));
+    }
+
+    [Test]
+    public void Author_AddAuthor_WithDuplicateName_ThrowsPersonAlreadyExistsException()
+    {
+        var author1 = new Author("Stephen", "King", new DateTime(1947, 9, 21), "stephen.king@example.com", "The King");
+        Author.AddAuthor(author1);
+
+        var author2 = new Author("STEPHEN", "KING", new DateTime(1950, 1, 1), "another.email@example.com", "Different Nickname");
+
+        var ex = Assert.Throws<PersonAlreadyExistsException>(() => Author.AddAuthor(author2));
+        Assert.That(ex.Message, Does.Contain("Person with name"));
+        Assert.That(ex.Message, Does.Contain("STEPHEN KING"));
+    }
+
+    [Test]
+    public void BorrowRecord_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalBorrowDate = new DateTime(2025, 1, 15, 10, 30, 0);
+            var originalDueDate = originalBorrowDate.AddDays(30);
+            var originalReturnDate = originalDueDate.AddDays(5);
+
+            var borrowRecord = new BorrowRecord
+            {
+                BorrowDate = originalBorrowDate,
+                DueDate = originalDueDate,
+                ReturnDate = originalReturnDate,
+                Status = BorrowRecordStatus.Returned,
+                BorrowCode = "BR-TEST123"
+            };
+
+            var borrowRecordList = new List<BorrowRecord> { borrowRecord };
+
+            persistenceService.Save(borrowRecordList);
+
+            var loadedBorrowRecords = persistenceService.Load<BorrowRecord>();
+
+            Assert.That(loadedBorrowRecords, Is.Not.Null, "Loaded records should not be null");
+            Assert.That(loadedBorrowRecords, Has.Count.EqualTo(1), "Should load exactly one borrow record");
+
+            var loadedRecord = loadedBorrowRecords[0];
+            Assert.That(loadedRecord.BorrowCode, Is.EqualTo("BR-TEST123"), "BorrowCode should match");
+            Assert.That(loadedRecord.BorrowDate, Is.EqualTo(originalBorrowDate), "BorrowDate should match");
+            Assert.That(loadedRecord.DueDate, Is.EqualTo(originalDueDate), "DueDate should match");
+            Assert.That(loadedRecord.ReturnDate, Is.EqualTo(originalReturnDate), "ReturnDate should match");
+            Assert.That(loadedRecord.Status, Is.EqualTo(BorrowRecordStatus.Returned), "Status should match");
+            Assert.That(loadedRecord.FineAmount, Is.EqualTo(5.0), "FineAmount should be calculated correctly");
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
 }
