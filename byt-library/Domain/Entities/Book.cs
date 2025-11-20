@@ -5,14 +5,14 @@ namespace byt_library.Domain.Entities;
 
 public class Book : IDigitalResource, IPrintedResource
 {
-    public required string ISBN { get; set; }
+    public string ISBN { get; set; }
     public bool HasAudio { get; set; }
-    public required string Title { get; set; }
-    public required string Description { get; set; }
+    public string Title { get; set; }
+    public string Description { get; set; }
     public int Size { get; set; }
-    public required string Link { get; set; }
-    public required List<Translation> Translations { get; set; }
-    public required CoverType CoverType { get; set; }
+    public string Link { get; set; }
+    public List<Translation> Translations { get; set; }
+    public CoverType CoverType { get; set; }
     public int Quantity { get; set; }
 
     private static List<Book> _allBooks = new();

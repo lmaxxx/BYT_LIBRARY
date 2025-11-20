@@ -6,9 +6,9 @@ namespace byt_library.Domain.Entities;
 public class Newspaper : IPrintedResource
 {
     public string Publisher { get; set; }
-    public required string Title { get; set; }
-    public required string Description { get; set; }
-    public required CoverType CoverType { get; set; }
+    public string Title { get; set; }
+    public string Description { get; set; }
+    public CoverType CoverType { get; set; }
     public int Quantity { get; set; }
 
     private static List<Newspaper> _allNewspapers = new();

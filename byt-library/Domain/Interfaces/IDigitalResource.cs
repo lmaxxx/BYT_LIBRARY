@@ -9,8 +9,13 @@ public interface IDigitalResource : IResource
     
     public List<Translation> Translations { get; set; }
     
-    public void AddTraslation(string language)
+    public void AddTranslation(string language)
     {
+        if (!Translation._supportedLanguages.Contains(language))
+        {
+            throw new NotSupportedException("Language is not supported");
+        }
+        
         Translations.Add(new Translation { Language = language, Link = $"{Link}/{language}" });
     }
     

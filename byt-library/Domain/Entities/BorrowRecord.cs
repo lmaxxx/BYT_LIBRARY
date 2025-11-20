@@ -10,6 +10,15 @@ public class BorrowRecord
     public BorrowRecordStatus Status { get; set; }
     public string BorrowCode { get; set; }
 
+    public BorrowRecord()
+    {
+        BorrowDate = DateTime.Now;
+        DueDate = BorrowDate.AddDays(30);
+        Status = BorrowRecordStatus.Ongoing;
+        ReturnDate = null;
+        GenerateBorrowCode();
+    }
+
     public BorrowRecord(int borrowDays = 30)
     {
         BorrowDate = DateTime.Now;
