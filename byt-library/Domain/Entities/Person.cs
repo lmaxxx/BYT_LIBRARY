@@ -1,3 +1,5 @@
+using byt_library.Domain.Services;
+
 namespace byt_library.Domain.Entities;
 
 public class Person
@@ -25,6 +27,28 @@ public class Person
 
     private static List<Person> _allPersons = new();
     private static readonly object _lock = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Person()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Person>();
+            lock (_lock)
+            {
+                _allPersons = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allPersons = new List<Person>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Person).Name}: {ex.Message}");
+            _allPersons = new List<Person>();
+        }
+    }
 
     public Person(string firstName, string lastName, DateTime dateOfBirth, string? email = null)
     {
@@ -32,9 +56,10 @@ public class Person
         LastName = lastName;
         Email = email;
         DateOfBirth = dateOfBirth;
+        AddPerson(this);
     }
 
-    public static void AddPerson(Person person)
+    private static void AddPerson(Person person)
     {
         if (person == null)
             throw new PersonIsNullException(nameof(person), "Cannot add null person to extent");
@@ -52,6 +77,16 @@ public class Person
                 throw new PersonAlreadyExistsException($"Person with name {person.FirstName} {person.LastName} already exists in extent");
 
             _allPersons.Add(person);
+
+            try
+            {
+                _persistenceService.Save(_allPersons);
+            }
+            catch (Exception ex)
+            {
+                _allPersons.Remove(person);
+                throw new InvalidOperationException("Failed to persist Person to file", ex);
+            }
         }
     }
 

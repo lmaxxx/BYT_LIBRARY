@@ -1,3 +1,5 @@
+using byt_library.Domain.Services;
+
 namespace byt_library.Domain.Entities;
 
 public class Translation
@@ -7,9 +9,40 @@ public class Translation
 
     private static List<Translation> _allTranslations = new();
     private static readonly object _lockTranslation = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
     public static readonly List<string> _supportedLanguages = ["polish", "english", "ukrainian"];
 
-    public static void AddTranslation(Translation translation)
+    static Translation()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Translation>();
+            lock (_lockTranslation)
+            {
+                _allTranslations = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allTranslations = new List<Translation>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Translation).Name}: {ex.Message}");
+            _allTranslations = new List<Translation>();
+        }
+    }
+
+    public Translation() { }
+
+    public Translation(string link, string language)
+    {
+        Link = link;
+        Language = language;
+        AddTranslation(this);
+    }
+
+    private static void AddTranslation(Translation translation)
     {
         if (translation == null)
             throw new TranslationIsNullException(nameof(translation), "Cannot add null translation to extent");
@@ -27,6 +60,16 @@ public class Translation
                 throw new InvalidOperationException($"Translation with Link '{translation.Link}' and Language '{translation.Language}' already exists in extent");
 
             _allTranslations.Add(translation);
+
+            try
+            {
+                _persistenceService.Save(_allTranslations);
+            }
+            catch (Exception ex)
+            {
+                _allTranslations.Remove(translation);
+                throw new InvalidOperationException("Failed to persist Translation to file", ex);
+            }
         }
     }
 

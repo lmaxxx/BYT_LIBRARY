@@ -1,4 +1,5 @@
 using byt_library.Domain.Interfaces;
+using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
 
@@ -9,16 +10,40 @@ public class Catalog
 
     private static List<Catalog> _allCatalogs = new();
     private static readonly object _lockCatalog = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Catalog()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Catalog>();
+            lock (_lockCatalog)
+            {
+                _allCatalogs = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allCatalogs = new List<Catalog>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Catalog).Name}: {ex.Message}");
+            _allCatalogs = new List<Catalog>();
+        }
+    }
 
     public Catalog()
     {
         resources = new Dictionary<string, IResource>();
+        AddCatalog(this);
     }
 
     public Catalog(string name)
     {
         Name = name;
         resources = new Dictionary<string, IResource>();
+        AddCatalog(this);
     }
 
     public void AddResource(IResource resource)
@@ -26,7 +51,7 @@ public class Catalog
         resources.Add(resource.Title, resource);
     }
 
-    public static void AddCatalog(Catalog catalog)
+    private static void AddCatalog(Catalog catalog)
     {
         if (catalog == null)
             throw new CatalogIsNullException(nameof(catalog), "Cannot add null catalog to extent");
@@ -40,6 +65,16 @@ public class Catalog
                 throw new CatalogWithThisNameAlreadyExistsException($"Catalog with name {catalog.Name} already exists in extent");
 
             _allCatalogs.Add(catalog);
+
+            try
+            {
+                _persistenceService.Save(_allCatalogs);
+            }
+            catch (Exception ex)
+            {
+                _allCatalogs.Remove(catalog);
+                throw new InvalidOperationException("Failed to persist Catalog to file", ex);
+            }
         }
     }
 

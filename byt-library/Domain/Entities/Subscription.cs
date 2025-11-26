@@ -1,3 +1,5 @@
+using byt_library.Domain.Services;
+
 namespace byt_library.Domain.Entities;
 
 public class Subscription
@@ -8,6 +10,28 @@ public class Subscription
 
     private static List<Subscription> _allSubscriptions = new();
     private static readonly object _lockSubscription = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Subscription()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Subscription>();
+            lock (_lockSubscription)
+            {
+                _allSubscriptions = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allSubscriptions = new List<Subscription>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Subscription).Name}: {ex.Message}");
+            _allSubscriptions = new List<Subscription>();
+        }
+    }
 
     public Subscription() { }
 
@@ -16,6 +40,7 @@ public class Subscription
         SubscriptionCode = $"SUB-{Guid.NewGuid()}";
         StartDate = startDate;
         EndDate = endDate;
+        AddSubscription(this);
     }
 
     public bool IsActive()
@@ -33,7 +58,7 @@ public class Subscription
         return months * 25.0;
     }
 
-    public static void AddSubscription(Subscription subscription)
+    private static void AddSubscription(Subscription subscription)
     {
         if (subscription == null)
             throw new SubscriptionIsNullException(nameof(subscription), "Cannot add null subscription to extent");
@@ -47,6 +72,16 @@ public class Subscription
                 throw new SubscriptionAlreadyExistsException($"Subscription with code {subscription.SubscriptionCode} already exists in extent");
 
             _allSubscriptions.Add(subscription);
+
+            try
+            {
+                _persistenceService.Save(_allSubscriptions);
+            }
+            catch (Exception ex)
+            {
+                _allSubscriptions.Remove(subscription);
+                throw new InvalidOperationException("Failed to persist Subscription to file", ex);
+            }
         }
     }
 

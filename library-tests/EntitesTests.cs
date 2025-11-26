@@ -27,13 +27,29 @@ public class EntitiesTests
         Payment.ClearPaymentExtent();
         Subscription.ClearSubscriptionExtent();
         Book.ClearBookExtent();
+
+        // Clean up persistent data files
+        var dataDir = "data";
+        if (Directory.Exists(dataDir))
+        {
+            foreach (var file in Directory.GetFiles(dataDir, "*.json"))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
+        }
     }
 
     [Test]
     public void BorrowRecord_CalculateFineAmount_WhenOverdue_ReturnsCorrectFine()
     {
         var borrowRecord = new BorrowRecord(borrowDays: 30);
-        BorrowRecord.AddBorrowRecord(borrowRecord);
 
         borrowRecord.ReturnDate = borrowRecord.DueDate.AddDays(5);
 
@@ -124,7 +140,6 @@ public class EntitiesTests
     public void BorrowRecord_ReturnOnTime_FineAmountIsZero()
     {
         var borrowRecord = new BorrowRecord(borrowDays: 30);
-        BorrowRecord.AddBorrowRecord(borrowRecord);
 
         borrowRecord.ReturnDate = borrowRecord.DueDate;
         var fineAmount = borrowRecord.FineAmount;
@@ -141,11 +156,9 @@ public class EntitiesTests
     public void Person_AddPerson_WithDuplicateName_ThrowsInvalidOperationException()
     {
         var person1 = new Person("John", "Doe", new DateTime(1990, 1, 1), "john.doe@example.com");
-        Person.AddPerson(person1);
 
-        var person2 = new Person("JOHN", "DOE", new DateTime(1992, 5, 15), "jane.smith@example.com");
-        
-        var ex = Assert.Throws<PersonAlreadyExistsException>(() => Person.AddPerson(person2));
+        var ex = Assert.Throws<PersonAlreadyExistsException>(() =>
+            new Person("JOHN", "DOE", new DateTime(1992, 5, 15), "jane.smith@example.com"));
         Assert.That(ex.Message, Does.Contain("Person with name"));
     }
     
@@ -205,11 +218,9 @@ public class EntitiesTests
     public void Author_AddAuthor_WithDuplicateName_ThrowsPersonAlreadyExistsException()
     {
         var author1 = new Author("Stephen", "King", new DateTime(1947, 9, 21), "stephen.king@example.com", "The King");
-        Author.AddAuthor(author1);
 
-        var author2 = new Author("STEPHEN", "KING", new DateTime(1950, 1, 1), "another.email@example.com", "Different Nickname");
-
-        var ex = Assert.Throws<PersonAlreadyExistsException>(() => Author.AddAuthor(author2));
+        var ex = Assert.Throws<PersonAlreadyExistsException>(() =>
+            new Author("STEPHEN", "KING", new DateTime(1950, 1, 1), "another.email@example.com", "Different Nickname"));
         Assert.That(ex.Message, Does.Contain("Person with name"));
         Assert.That(ex.Message, Does.Contain("STEPHEN KING"));
     }

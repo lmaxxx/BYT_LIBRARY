@@ -1,4 +1,5 @@
 using byt_library.Domain.Enums;
+using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
 
@@ -17,6 +18,7 @@ public class BorrowRecord
         Status = BorrowRecordStatus.Ongoing;
         ReturnDate = null;
         GenerateBorrowCode();
+        AddBorrowRecord(this);
     }
 
     public BorrowRecord(int borrowDays = 30)
@@ -26,6 +28,7 @@ public class BorrowRecord
         Status = BorrowRecordStatus.Ongoing;
         ReturnDate = null;
         GenerateBorrowCode();
+        AddBorrowRecord(this);
     }
 
     public double FineAmount
@@ -42,6 +45,28 @@ public class BorrowRecord
 
     private static List<BorrowRecord> _allBorrowRecords = new();
     private static readonly object _lockBorrowRecord = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static BorrowRecord()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<BorrowRecord>();
+            lock (_lockBorrowRecord)
+            {
+                _allBorrowRecords = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allBorrowRecords = new List<BorrowRecord>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(BorrowRecord).Name}: {ex.Message}");
+            _allBorrowRecords = new List<BorrowRecord>();
+        }
+    }
 
     public double CalculateFine()
     {
@@ -91,7 +116,7 @@ public class BorrowRecord
         BorrowCode = $"BR-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
     }
 
-    public static void AddBorrowRecord(BorrowRecord borrowRecord)
+    private static void AddBorrowRecord(BorrowRecord borrowRecord)
     {
         if (borrowRecord == null)
             throw new BorrowRecordIsNullException(nameof(borrowRecord), "Cannot add null borrow record to extent");
@@ -105,6 +130,16 @@ public class BorrowRecord
                 throw new BorrowRecordAlreadyExistsException($"BorrowRecord with code {borrowRecord.BorrowCode} already exists in extent");
 
             _allBorrowRecords.Add(borrowRecord);
+
+            try
+            {
+                _persistenceService.Save(_allBorrowRecords);
+            }
+            catch (Exception ex)
+            {
+                _allBorrowRecords.Remove(borrowRecord);
+                throw new InvalidOperationException("Failed to persist BorrowRecord to file", ex);
+            }
         }
     }
 

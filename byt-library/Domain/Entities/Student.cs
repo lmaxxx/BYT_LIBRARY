@@ -1,3 +1,5 @@
+using byt_library.Domain.Services;
+
 namespace byt_library.Domain.Entities;
 
 public class Student : Person
@@ -6,11 +8,35 @@ public class Student : Person
     
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Student()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Student>();
+            lock (_lockStudent)
+            {
+                _allStudents = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allStudents = new List<Student>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Student).Name}: {ex.Message}");
+            _allStudents = new List<Student>();
+        }
+    }
 
     public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null)
         : base(firstName, lastName, dateOfBirth, email)
     {
         EnrollmentDate = enrollmentDate;
+
+        AddStudent(this);
     }
 
     public bool isAllowedToBorrow()
@@ -18,12 +44,10 @@ public class Student : Person
         return false;
     }
     
-    public static void AddStudent(Student student)
+    private static void AddStudent(Student student)
     {
         if (student == null)
             throw new StudentIsNullException(nameof(student), "Cannot add null student to extent");
-
-        AddPerson(student);
 
         lock (_lockStudent)
         {
@@ -32,6 +56,16 @@ public class Student : Person
                 throw new StudentAlreadyExistsException($"Student with name {student.FirstName} {student.LastName} already exists in Student extent");
 
             _allStudents.Add(student);
+
+            try
+            {
+                _persistenceService.Save(_allStudents);
+            }
+            catch (Exception ex)
+            {
+                _allStudents.Remove(student);
+                throw new InvalidOperationException("Failed to persist Student to file", ex);
+            }
         }
     }
 

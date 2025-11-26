@@ -1,5 +1,6 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Interfaces;
+using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
 
@@ -17,8 +18,51 @@ public class Book : IDigitalResource, IPrintedResource
 
     private static List<Book> _allBooks = new();
     private static readonly object _lockBook = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
 
-    public static void AddBook(Book book)
+    static Book()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Book>();
+            lock (_lockBook)
+            {
+                _allBooks = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allBooks = new List<Book>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Book).Name}: {ex.Message}");
+            _allBooks = new List<Book>();
+        }
+    }
+
+    public Book()
+    {
+        Translations = new List<Translation>();
+    }
+
+    public Book(string isbn, string title, string description,
+                bool hasAudio = false, int size = 0, string link = "",
+                CoverType coverType = CoverType.Soft, int quantity = 1)
+    {
+        ISBN = isbn;
+        Title = title;
+        Description = description;
+        HasAudio = hasAudio;
+        Size = size;
+        Link = link;
+        CoverType = coverType;
+        Quantity = quantity;
+        Translations = new List<Translation>();
+        AddBook(this);
+    }
+
+    private static void AddBook(Book book)
     {
         if (book == null)
             throw new BookIsNullException(nameof(book), "Cannot add null book to extent");
@@ -32,6 +76,16 @@ public class Book : IDigitalResource, IPrintedResource
                 throw new BookAlreadyExistsException($"Book with ISBN {book.ISBN} already exists in extent");
 
             _allBooks.Add(book);
+
+            try
+            {
+                _persistenceService.Save(_allBooks);
+            }
+            catch (Exception ex)
+            {
+                _allBooks.Remove(book);
+                throw new InvalidOperationException("Failed to persist Book to file", ex);
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 using byt_library.Domain.Enums;
+using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
 
@@ -14,6 +15,28 @@ public class Payment
 
     private static List<Payment> _allPayments = new();
     private static readonly object _lockPayment = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Payment()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Payment>();
+            lock (_lockPayment)
+            {
+                _allPayments = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allPayments = new List<Payment>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Payment).Name}: {ex.Message}");
+            _allPayments = new List<Payment>();
+        }
+    }
 
     public Payment() { }
     
@@ -36,9 +59,10 @@ public class Payment
         PaymentMethod = paymentMethod;
         Subscription = subscription;
         BorrowRecord = borrowRecord;
+        AddPayment(this);
     }
 
-    public static void AddPayment(Payment payment)
+    private static void AddPayment(Payment payment)
     {
         if (payment == null)
             throw new PaymentIsNullException(nameof(payment), "Cannot add null payment to extent");
@@ -52,6 +76,16 @@ public class Payment
                 throw new PaymentAlreadyExistsException($"Payment with code {payment.PaymentCode} already exists in extent");
 
             _allPayments.Add(payment);
+
+            try
+            {
+                _persistenceService.Save(_allPayments);
+            }
+            catch (Exception ex)
+            {
+                _allPayments.Remove(payment);
+                throw new InvalidOperationException("Failed to persist Payment to file", ex);
+            }
         }
     }
 
