@@ -1,3 +1,5 @@
+using byt_library.Domain.Services;
+
 namespace byt_library.Domain.Entities;
 
 public class Author : Person
@@ -6,27 +8,58 @@ public class Author : Person
 
     private static List<Author> _allAuthors = new();
     private static readonly object _lockAuthor = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Author()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Author>();
+            lock (_lockAuthor)
+            {
+                _allAuthors = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allAuthors = new List<Author>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Author).Name}: {ex.Message}");
+            _allAuthors = new List<Author>();
+        }
+    }
 
     public Author(string firstName, string lastName, DateTime dateOfBirth, string? email = null, string? nickname = null)
         : base(firstName, lastName, dateOfBirth, email)
     {
         Nickname = nickname;
+        AddAuthor(this);
     }
 
-    public static void AddAuthor(Author author)
+    private static void AddAuthor(Author author)
     {
         if (author == null)
             throw new AuthorIsNullException(nameof(author), "Cannot add null author to extent");
-
-        AddPerson(author);
 
         lock (_lockAuthor)
         {
             if (_allAuthors.Any(a => a.FirstName.Equals(author.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                      a.LastName.Equals(author.LastName, StringComparison.OrdinalIgnoreCase)))
                 throw new AuthorWithSuchNameAlreadyExistsException($"Author with name {author.FirstName} {author.LastName} already exists in Author extent");
-            
+
             _allAuthors.Add(author);
+
+            try
+            {
+                _persistenceService.Save(_allAuthors);
+            }
+            catch (Exception ex)
+            {
+                _allAuthors.Remove(author);
+                throw new InvalidOperationException("Failed to persist Author to file", ex);
+            }
         }
     }
 
@@ -88,11 +121,8 @@ public class Author : Person
     {
         lock (_lockAuthor)
         {
-            foreach (var author in _allAuthors.ToList())
-            {
-                RemovePerson(author.FirstName, author.LastName);
-            }
             _allAuthors.Clear();
+            _persistenceService.Save(_allAuthors);
         }
     }
 

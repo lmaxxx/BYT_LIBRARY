@@ -1,5 +1,6 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Interfaces;
+using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
 
@@ -13,8 +14,43 @@ public class Newspaper : IPrintedResource
 
     private static List<Newspaper> _allNewspapers = new();
     private static readonly object _lockNewspaper = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
 
-    public static void AddNewspaper(Newspaper newspaper)
+    static Newspaper()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Newspaper>();
+            lock (_lockNewspaper)
+            {
+                _allNewspapers = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allNewspapers = new List<Newspaper>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Newspaper).Name}: {ex.Message}");
+            _allNewspapers = new List<Newspaper>();
+        }
+    }
+
+    public Newspaper() { }
+
+    public Newspaper(string publisher, string title, string description,
+                     CoverType coverType = CoverType.Soft, int quantity = 1)
+    {
+        Publisher = publisher;
+        Title = title;
+        Description = description;
+        CoverType = coverType;
+        Quantity = quantity;
+        AddNewspaper(this);
+    }
+
+    private static void AddNewspaper(Newspaper newspaper)
     {
         if (newspaper == null)
             throw new NewspaperIsNullException(nameof(newspaper), "Cannot add null newspaper to extent");
@@ -32,6 +68,16 @@ public class Newspaper : IPrintedResource
                 throw new NewspaperAlreadyExistsException($"Newspaper with Title '{newspaper.Title}' and Publisher '{newspaper.Publisher}' already exists in extent");
 
             _allNewspapers.Add(newspaper);
+
+            try
+            {
+                _persistenceService.Save(_allNewspapers);
+            }
+            catch (Exception ex)
+            {
+                _allNewspapers.Remove(newspaper);
+                throw new InvalidOperationException("Failed to persist Newspaper to file", ex);
+            }
         }
     }
 
@@ -71,6 +117,7 @@ public class Newspaper : IPrintedResource
         lock (_lockNewspaper)
         {
             _allNewspapers.Clear();
+            _persistenceService.Save(_allNewspapers);
         }
     }
 }

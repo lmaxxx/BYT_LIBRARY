@@ -1,3 +1,5 @@
+using byt_library.Domain.Services;
+
 namespace byt_library.Domain.Entities;
 
 public class Staff : Person
@@ -6,19 +8,41 @@ public class Staff : Person
     
     private static List<Staff> _allStaff = new();
     private static readonly object _lockStaff = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+
+    static Staff()
+    {
+        try
+        {
+            var loadedItems = _persistenceService.Load<Staff>();
+            lock (_lockStaff)
+            {
+                _allStaff = loadedItems;
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            _allStaff = new List<Staff>();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load {typeof(Staff).Name}: {ex.Message}");
+            _allStaff = new List<Staff>();
+        }
+    }
 
     public Staff(string firstName, string lastName, DateTime dateOfBirth, string department, string? email = null)
         : base(firstName, lastName, dateOfBirth, email)
     {
         Department = department;
+
+        AddStaff(this);
     }
 
-    public static void AddStaff(Staff staff)
+    private static void AddStaff(Staff staff)
     {
         if (staff == null)
             throw new StaffIsNullException(nameof(staff), "Cannot add null staff to extent");
-
-        AddPerson(staff);
 
         lock (_lockStaff)
         {
@@ -27,6 +51,16 @@ public class Staff : Person
                 throw new StaffAlreadyExistsException($"Staff with name {staff.FirstName} {staff.LastName} already exists in Staff extent");
 
             _allStaff.Add(staff);
+
+            try
+            {
+                _persistenceService.Save(_allStaff);
+            }
+            catch (Exception ex)
+            {
+                _allStaff.Remove(staff);
+                throw new InvalidOperationException("Failed to persist Staff to file", ex);
+            }
         }
     }
 
@@ -79,11 +113,8 @@ public class Staff : Person
     {
         lock (_lockStaff)
         {
-            foreach (var staff in _allStaff.ToList())
-            {
-                RemovePerson(staff.FirstName, staff.LastName);
-            }
             _allStaff.Clear();
+            _persistenceService.Save(_allStaff);
         }
     }
 
