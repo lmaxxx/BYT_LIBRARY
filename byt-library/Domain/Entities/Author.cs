@@ -121,11 +121,8 @@ public class Author : Person
     {
         lock (_lockAuthor)
         {
-            foreach (var author in _allAuthors.ToList())
-            {
-                RemovePerson(author.FirstName, author.LastName);
-            }
             _allAuthors.Clear();
+            _persistenceService.Save(_allAuthors);
         }
     }
 

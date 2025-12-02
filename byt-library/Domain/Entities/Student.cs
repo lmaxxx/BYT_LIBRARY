@@ -128,11 +128,8 @@ public class Student : Person
     {
         lock (_lockStudent)
         {
-            foreach (var student in _allStudents.ToList())
-            {
-                RemovePerson(student.FirstName, student.LastName);
-            }
             _allStudents.Clear();
+            _persistenceService.Save(_allStudents);
         }
     }
 

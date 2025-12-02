@@ -109,6 +109,7 @@ public class Translation
         lock (_lockTranslation)
         {
             _allTranslations.Clear();
+            _persistenceService.Save(_allTranslations);
         }
     }
 }

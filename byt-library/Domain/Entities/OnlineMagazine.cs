@@ -117,6 +117,7 @@ public class OnlineMagazine : IDigitalResource
         lock (_lockOnlineMagazine)
         {
             _allOnlineMagazines.Clear();
+            _persistenceService.Save(_allOnlineMagazines);
         }
     }
 }

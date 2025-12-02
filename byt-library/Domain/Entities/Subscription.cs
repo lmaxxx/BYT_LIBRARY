@@ -119,6 +119,7 @@ public class Subscription
         lock (_lockSubscription)
         {
             _allSubscriptions.Clear();
+            _persistenceService.Save(_allSubscriptions);
         }
     }
 }

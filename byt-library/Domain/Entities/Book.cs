@@ -123,6 +123,7 @@ public class Book : IDigitalResource, IPrintedResource
         lock (_lockBook)
         {
             _allBooks.Clear();
+            _persistenceService.Save(_allBooks);
         }
     }
 }

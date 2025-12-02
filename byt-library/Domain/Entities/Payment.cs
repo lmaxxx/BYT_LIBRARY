@@ -123,6 +123,7 @@ public class Payment
         lock (_lockPayment)
         {
             _allPayments.Clear();
+            _persistenceService.Save(_allPayments);
         }
     }
 }

@@ -112,6 +112,7 @@ public class Catalog
         lock (_lockCatalog)
         {
             _allCatalogs.Clear();
+            _persistenceService.Save(_allCatalogs);
         }
     }
 }

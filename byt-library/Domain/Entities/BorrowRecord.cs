@@ -177,6 +177,7 @@ public class BorrowRecord
         lock (_lockBorrowRecord)
         {
             _allBorrowRecords.Clear();
+            _persistenceService.Save(_allBorrowRecords);
         }
     }
 }

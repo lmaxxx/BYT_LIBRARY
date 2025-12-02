@@ -113,11 +113,8 @@ public class Staff : Person
     {
         lock (_lockStaff)
         {
-            foreach (var staff in _allStaff.ToList())
-            {
-                RemovePerson(staff.FirstName, staff.LastName);
-            }
             _allStaff.Clear();
+            _persistenceService.Save(_allStaff);
         }
     }
 

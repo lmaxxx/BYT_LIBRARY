@@ -27,23 +27,6 @@ public class EntitiesTests
         Payment.ClearPaymentExtent();
         Subscription.ClearSubscriptionExtent();
         Book.ClearBookExtent();
-
-        // Clean up persistent data files
-        var dataDir = "data";
-        if (Directory.Exists(dataDir))
-        {
-            foreach (var file in Directory.GetFiles(dataDir, "*.json"))
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch
-                {
-                    // Ignore cleanup errors
-                }
-            }
-        }
     }
 
     [Test]

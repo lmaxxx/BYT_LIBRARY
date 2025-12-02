@@ -128,6 +128,7 @@ public class Person
         lock (_lock)
         {
             _allPersons.Clear();
+            _persistenceService.Save(_allPersons);
         }
     }
 

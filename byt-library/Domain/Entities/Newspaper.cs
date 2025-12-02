@@ -117,6 +117,7 @@ public class Newspaper : IPrintedResource
         lock (_lockNewspaper)
         {
             _allNewspapers.Clear();
+            _persistenceService.Save(_allNewspapers);
         }
     }
 }
