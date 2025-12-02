@@ -1,5 +1,6 @@
 using byt_library.Domain.Interfaces;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -46,6 +47,12 @@ public class OnlineMagazine : IDigitalResource
     public OnlineMagazine(string pageLink, string title, string description,
                           bool hasAudio = false, int size = 0, string link = "")
     {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new TitleIsEmptyException("Online Magazine title cannot be empty");
+        
+        if (string.IsNullOrWhiteSpace(description))
+            throw new DescriptionIsEmptyException();
+        
         PageLink = pageLink;
         Title = title;
         Description = description;

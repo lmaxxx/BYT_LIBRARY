@@ -1,6 +1,7 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Interfaces;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -50,6 +51,15 @@ public class Book : IDigitalResource, IPrintedResource
                 bool hasAudio = false, int size = 0, string link = "",
                 CoverType coverType = CoverType.Soft, int quantity = 1)
     {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new TitleIsEmptyException("Book title cannot be empty");
+        
+        if (string.IsNullOrWhiteSpace(description))
+            throw new DescriptionIsEmptyException();
+
+        if (quantity <= 0)
+            throw new InvalidQuantityException();
+        
         ISBN = isbn;
         Title = title;
         Description = description;

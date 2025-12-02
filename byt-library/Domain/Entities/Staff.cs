@@ -1,4 +1,5 @@
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -34,6 +35,9 @@ public class Staff : Person
     public Staff(string firstName, string lastName, DateTime dateOfBirth, string department, string? email = null)
         : base(firstName, lastName, dateOfBirth, email)
     {
+        if (string.IsNullOrWhiteSpace(department))
+            throw new DepartmentIsEmptyException();
+        
         Department = department;
 
         AddStaff(this);

@@ -1,4 +1,5 @@
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -37,6 +38,9 @@ public class Translation
 
     public Translation(string link, string language)
     {
+        if (!_supportedLanguages.Contains(language.ToLower()))
+            throw new UnsupportedLanguageException($"Language '{language}' is not supported.");
+        
         Link = link;
         Language = language;
         AddTranslation(this);
@@ -53,11 +57,11 @@ public class Translation
                 throw new LinkIsEmptyException("Link cannot be empty");
 
             if (string.IsNullOrWhiteSpace(translation.Language))
-                throw new TranslationAlreadyExistsException("Language cannot be empty");
+                throw new LanguageIsEmptyException("Language cannot be empty");
 
             if (_allTranslations.Any(t => t.Link.Equals(translation.Link, StringComparison.OrdinalIgnoreCase) &&
                                           t.Language.Equals(translation.Language, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException($"Translation with Link '{translation.Link}' and Language '{translation.Language}' already exists in extent");
+                throw new TranslationAlreadyExistsException($"Translation with Link '{translation.Link}' and Language '{translation.Language}' already exists in extent");
 
             _allTranslations.Add(translation);
 

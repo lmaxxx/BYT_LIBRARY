@@ -1,5 +1,6 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -52,6 +53,9 @@ public class Payment
         {
             throw new PaymentIsNotAttachedException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
         }
+        
+        if (amount <= 0)
+            throw new InvalidAmountException();
 
         PaymentCode = $"PAY-{Guid.NewGuid()}";
         Amount = amount;

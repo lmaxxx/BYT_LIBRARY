@@ -1,4 +1,5 @@
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -34,6 +35,9 @@ public class Author : Person
     public Author(string firstName, string lastName, DateTime dateOfBirth, string? email = null, string? nickname = null)
         : base(firstName, lastName, dateOfBirth, email)
     {
+        if (nickname != null && string.IsNullOrWhiteSpace(nickname))
+            throw new NicknameIsEmptyException();
+        
         Nickname = nickname;
         AddAuthor(this);
     }
@@ -48,6 +52,9 @@ public class Author : Person
             if (_allAuthors.Any(a => a.FirstName.Equals(author.FirstName, StringComparison.OrdinalIgnoreCase) &&
                                      a.LastName.Equals(author.LastName, StringComparison.OrdinalIgnoreCase)))
                 throw new AuthorWithSuchNameAlreadyExistsException($"Author with name {author.FirstName} {author.LastName} already exists in Author extent");
+            
+            if (!string.IsNullOrWhiteSpace(author.Nickname) && _allAuthors.Any(a => a.Nickname != null && a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
+                throw new AuthorWithSuchNicknameAlreadyExistsException($"Author with nickname {author.Nickname} already exists in Author extent");
 
             _allAuthors.Add(author);
 
