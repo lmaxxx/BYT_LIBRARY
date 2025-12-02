@@ -1,3 +1,4 @@
+using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
@@ -139,10 +140,10 @@ public class Staff : Person
     public void SetSupervisor(Staff supervisor)
     {
         if (supervisor == null)
-            throw new ArgumentNullException(nameof(supervisor));
+            throw new StaffIsNullException(nameof(supervisor), "Supervisor must exist.");
 
         if (supervisor == this)
-            throw new InvalidOperationException("A staff member cannot supervise themselves.");
+            throw new StaffSelfSupervisionException("A staff member cannot supervise themselves.");
 
         // avoid infinite recursion
         if (_supervisor == supervisor)
@@ -181,10 +182,10 @@ public class Staff : Person
     public void AddSubordinate(Staff subordinate)
     {
         if (subordinate == null)
-            throw new ArgumentNullException(nameof(subordinate));
+            throw new StaffIsNullException(nameof(subordinate), "Subordinate must exist.");
 
         if (subordinate == this)
-            throw new InvalidOperationException("A staff member cannot supervise themselves.");
+            throw new StaffSelfSupervisionException("A staff member cannot supervise themselves.");
 
         if (_subordinates.Contains(subordinate))
             return;
@@ -207,7 +208,7 @@ public class Staff : Person
     public void RemoveSubordinate(Staff subordinate)
     {
         if (subordinate == null)
-            throw new ArgumentNullException(nameof(subordinate));
+            throw new StaffIsNullException(nameof(subordinate), "Subordinate must exist.");
 
         if (!_subordinates.Contains(subordinate))
             return;
@@ -224,10 +225,10 @@ public class Staff : Person
     public void ChangeSupervisor(Staff newSupervisor)
     {
         if (newSupervisor == null)
-            throw new ArgumentNullException(nameof(newSupervisor));
+            throw new StaffIsNullException(nameof(newSupervisor), "Supervisor must exist.");
 
         if (newSupervisor == this)
-            throw new InvalidOperationException("A staff member cannot supervise themselves.");
+            throw new StaffSelfSupervisionException("A staff member cannot supervise themselves.");
 
         RemoveSupervisor();
         SetSupervisor(newSupervisor);

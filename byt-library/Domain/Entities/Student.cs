@@ -1,3 +1,4 @@
+using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
@@ -148,14 +149,14 @@ public class Student : Person
     public void AddSubscription(Subscription subscription)
     {
         if (subscription == null)
-            throw new ArgumentNullException(nameof(subscription));
+            throw new SubscriptionIsNullException(nameof(subscription), "Subscription must exist.");
 
         if (_subscriptions.Contains(subscription))
             return;
 
         // subscription can belong to only ONE student
         if (subscription.GetStudent() != null && subscription.GetStudent() != this)
-            throw new InvalidOperationException("This subscription already belongs to another student.");
+            throw new SubscriptionAlreadyBelongsException("This subscription already belongs to another student.");
 
         _subscriptions.Add(subscription);
 
@@ -166,7 +167,7 @@ public class Student : Person
     public void RemoveSubscription(Subscription subscription)
     {
         if (subscription == null)
-            throw new ArgumentNullException(nameof(subscription));
+            throw new SubscriptionIsNullException(nameof(subscription), "Subscription must exist.");
 
         if (!_subscriptions.Contains(subscription))
             return;
@@ -179,11 +180,14 @@ public class Student : Person
     
     public void UpdateSubscription(Subscription oldSub, Subscription newSub)
     {
-        if (oldSub == null || newSub == null)
-            throw new ArgumentNullException();
+        if (oldSub == null)
+            throw new SubscriptionIsNullException(nameof(oldSub), "Subscription must exist.");
+        
+        if (newSub == null) 
+            throw new SubscriptionIsNullException(nameof(newSub), "Subscription must exist.");
 
         if (!_subscriptions.Contains(oldSub))
-            throw new InvalidOperationException("Old subscription is not assigned to this student.");
+            throw new SubscriptionIsNotAssignedException("Old subscription is not assigned to this student.");
 
         RemoveSubscription(oldSub);
         AddSubscription(newSub);

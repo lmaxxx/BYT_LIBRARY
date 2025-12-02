@@ -1,3 +1,4 @@
+using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 
 namespace byt_library.Domain.Entities;
@@ -133,7 +134,7 @@ public class Subscription
     public void SetStudent(Student student)
     {
         if (student == null)
-            throw new ArgumentNullException(nameof(student));
+            throw new StudentIsNullException(nameof(student), "Student must exist.");
 
         // avoid infinite recursion
         if (_student == student)
@@ -141,7 +142,7 @@ public class Subscription
 
         // prevent assigning subscription to a different student unless first removed
         if (_student != null && _student != student)
-            throw new InvalidOperationException("Subscription already assigned to another student.");
+            throw new SubscriptionAlreadyBelongsException("Subscription already assigned to another student.");
 
         _student = student;
 
