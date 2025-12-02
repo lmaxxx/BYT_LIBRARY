@@ -130,16 +130,16 @@ public class Subscription
         return _student;
     }
 
-    internal void SetStudent(Student student)
+    public void SetStudent(Student student)
     {
         if (student == null)
             throw new ArgumentNullException(nameof(student));
 
-        // Avoid infinite recursion
+        // avoid infinite recursion
         if (_student == student)
             return;
 
-        // Prevent assigning subscription to a different student unless first removed
+        // prevent assigning subscription to a different student unless first removed
         if (_student != null && _student != student)
             throw new InvalidOperationException("Subscription already assigned to another student.");
 
@@ -152,7 +152,7 @@ public class Subscription
         }
     }
 
-    internal void RemoveStudent()
+    public void RemoveStudent()
     {
         if (_student == null)
             return;
