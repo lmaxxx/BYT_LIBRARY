@@ -1,3 +1,4 @@
+using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
 
@@ -6,6 +7,8 @@ namespace byt_library.Domain.Entities;
 public class Student : Person
 {
     public DateTime EnrollmentDate { get; set; }
+    
+    private readonly HashSet<Subscription> _subscriptions = new();
     
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
@@ -141,4 +144,57 @@ public class Student : Person
     {
         return base.ToString() + $" - Enrolled: {EnrollmentDate:yyyy-MM-dd}";
     }
+    
+    public IReadOnlyCollection<Subscription> GetSubscriptions()
+    {
+        return _subscriptions.ToList().AsReadOnly(); // return copy
+    }
+
+    public void AddSubscription(Subscription subscription)
+    {
+        if (subscription == null)
+            throw new SubscriptionIsNullException(nameof(subscription), "Subscription must exist.");
+
+        if (_subscriptions.Contains(subscription))
+            return;
+
+        // subscription can belong to only ONE student
+        if (subscription.GetStudent() != null && subscription.GetStudent() != this)
+            throw new SubscriptionAlreadyBelongsException("This subscription already belongs to another student.");
+
+        _subscriptions.Add(subscription);
+
+        // reverse connection
+        subscription.SetStudent(this);
+    }
+
+    public void RemoveSubscription(Subscription subscription)
+    {
+        if (subscription == null)
+            throw new SubscriptionIsNullException(nameof(subscription), "Subscription must exist.");
+
+        if (!_subscriptions.Contains(subscription))
+            return;
+
+        _subscriptions.Remove(subscription);
+
+        // reverse connection
+        subscription.RemoveStudent();
+    }
+    
+    public void UpdateSubscription(Subscription oldSub, Subscription newSub)
+    {
+        if (oldSub == null)
+            throw new SubscriptionIsNullException(nameof(oldSub), "Subscription must exist.");
+        
+        if (newSub == null) 
+            throw new SubscriptionIsNullException(nameof(newSub), "Subscription must exist.");
+
+        if (!_subscriptions.Contains(oldSub))
+            throw new SubscriptionIsNotAssignedException("Old subscription is not assigned to this student.");
+
+        RemoveSubscription(oldSub);
+        AddSubscription(newSub);
+    }
+
 }

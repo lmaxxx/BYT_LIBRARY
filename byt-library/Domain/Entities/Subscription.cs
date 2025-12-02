@@ -1,3 +1,4 @@
+using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
 
@@ -8,6 +9,8 @@ public class Subscription
     public string SubscriptionCode { get; private set; } = string.Empty;
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
+    
+    private Student? _student;
 
     private static List<Subscription> _allSubscriptions = new();
     private static readonly object _lockSubscription = new();
@@ -124,6 +127,48 @@ public class Subscription
         {
             _allSubscriptions.Clear();
             _persistenceService.Save(_allSubscriptions);
+        }
+    }
+    
+    public Student? GetStudent()
+    {
+        return _student;
+    }
+
+    public void SetStudent(Student student)
+    {
+        if (student == null)
+            throw new StudentIsNullException(nameof(student), "Student must exist.");
+
+        // avoid infinite recursion
+        if (_student == student)
+            return;
+
+        // prevent assigning subscription to a different student unless first removed
+        if (_student != null && _student != student)
+            throw new SubscriptionAlreadyBelongsException("Subscription already assigned to another student.");
+
+        _student = student;
+
+        // reverse connection
+        if (!student.GetSubscriptions().Contains(this))
+        {
+            student.AddSubscription(this);
+        }
+    }
+
+    public void RemoveStudent()
+    {
+        if (_student == null)
+            return;
+
+        var oldStudent = _student;
+        _student = null;
+
+        // reverse connection
+        if (oldStudent.GetSubscriptions().Contains(this))
+        {
+            oldStudent.RemoveSubscription(this);
         }
     }
 }
