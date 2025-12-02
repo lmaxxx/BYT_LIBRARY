@@ -1,5 +1,6 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -23,6 +24,9 @@ public class BorrowRecord
 
     public BorrowRecord(int borrowDays = 30)
     {
+        if (borrowDays <= 0)
+            throw new InvalidBorrowDaysException();
+        
         BorrowDate = DateTime.Now;
         DueDate = BorrowDate.AddDays(borrowDays);
         Status = BorrowRecordStatus.Ongoing;

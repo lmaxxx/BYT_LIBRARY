@@ -1,5 +1,6 @@
 using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -37,6 +38,9 @@ public class Student : Person
     public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null)
         : base(firstName, lastName, dateOfBirth, email)
     {
+        if (enrollmentDate > DateTime.Now)
+            throw new InvalidEnrollmentDateException("Enrollment date cannot be in the future.");
+        
         EnrollmentDate = enrollmentDate;
 
         AddStudent(this);

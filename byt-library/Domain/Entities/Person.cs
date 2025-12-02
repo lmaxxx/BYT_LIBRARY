@@ -1,4 +1,5 @@
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -52,6 +53,11 @@ public class Person
 
     public Person(string firstName, string lastName, DateTime dateOfBirth, string? email = null)
     {
+        if (!string.IsNullOrWhiteSpace(email) && !email.Contains('@'))
+        {
+            throw new InvalidEmailException($"The provided email '{email}' is not valid.");
+        }
+        
         FirstName = firstName;
         LastName = lastName;
         Email = email;

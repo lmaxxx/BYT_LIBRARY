@@ -1,5 +1,6 @@
 using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -40,6 +41,9 @@ public class Subscription
 
     public Subscription(DateTime startDate, DateTime endDate)
     {
+        if (endDate <= startDate)
+            throw new InvalidDateRangeException("End date must be after start date.");
+        
         SubscriptionCode = $"SUB-{Guid.NewGuid()}";
         StartDate = startDate;
         EndDate = endDate;
