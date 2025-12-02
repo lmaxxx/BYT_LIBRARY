@@ -1,6 +1,7 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Interfaces;
 using byt_library.Domain.Services;
+using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
@@ -42,6 +43,12 @@ public class Newspaper : IPrintedResource
     public Newspaper(string publisher, string title, string description,
                      CoverType coverType = CoverType.Soft, int quantity = 1)
     {
+        if (string.IsNullOrWhiteSpace(description))
+            throw new DescriptionIsEmptyException();
+        
+        if (quantity <= 0)
+            throw new InvalidQuantityException();
+        
         Publisher = publisher;
         Title = title;
         Description = description;
