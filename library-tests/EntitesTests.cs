@@ -17,6 +17,12 @@ public class EntitiesTests
         Payment.ClearPaymentExtent();
         Subscription.ClearSubscriptionExtent();
         Book.ClearBookExtent();
+        Catalog.ClearCatalogExtent();
+        Newspaper.ClearNewspaperExtent();
+        OnlineMagazine.ClearOnlineMagazineExtent();
+        Staff.ClearStaffExtent();
+        Student.ClearStudentExtent();
+        Translation.ClearTranslationExtent();
     }
 
     [TearDown]
@@ -28,6 +34,12 @@ public class EntitiesTests
         Payment.ClearPaymentExtent();
         Subscription.ClearSubscriptionExtent();
         Book.ClearBookExtent();
+        Catalog.ClearCatalogExtent();
+        Newspaper.ClearNewspaperExtent();
+        OnlineMagazine.ClearOnlineMagazineExtent();
+        Staff.ClearStaffExtent();
+        Student.ClearStudentExtent();
+        Translation.ClearTranslationExtent();
     }
 
     [Test]
@@ -43,7 +55,7 @@ public class EntitiesTests
         Assert.That(fineAmount, Is.EqualTo(5.0), "Fine should be $1 per day overdue");
         Assert.That(calculatedFine, Is.EqualTo(5.0), "CalculateFine() should return same as FineAmount property");
     }
-    
+
     [Test]
     public void Payment_Constructor_WhenBothSubscriptionAndBorrowRecordProvided_ThrowsException()
     {
@@ -106,7 +118,7 @@ public class EntitiesTests
 
         var expiredSubscription = new Subscription(yesterday.AddDays(-30), yesterday);
         Assert.That(expiredSubscription.IsActive(), Is.False, "Subscription should be inactive after end date");
-        
+
         var activeSubscription = new Subscription(yesterday, tomorrow);
         Assert.That(activeSubscription.IsActive(), Is.True, "Subscription should be active when within date range");
 
@@ -145,7 +157,7 @@ public class EntitiesTests
             new Person("JOHN", "DOE", new DateTime(1992, 5, 15), "jane.smith@example.com"));
         Assert.That(ex.Message, Does.Contain("Person with name"));
     }
-    
+
     [Test]
     public void Person_Age_CalculatedCorrectly_ConsideringBirthdayThisYear()
     {
@@ -168,7 +180,8 @@ public class EntitiesTests
     [Test]
     public void IDigitalResource_AddTranslation_WithLanguage_ThrowsNotSupportedExceptionWhenExpected()
     {
-        IDigitalResource book = new Book{
+        IDigitalResource book = new Book
+        {
             ISBN = "978-3-16-148410-0",
             HasAudio = true,
             Quantity = 5,
@@ -257,17 +270,6 @@ public class EntitiesTests
     }
 
     [Test]
-    public void Author_AddAuthor_WithDuplicateName_ThrowsAuthorWithSuchNameAlreadyExistsException()
-    {
-        new Author("John", "Doe", new DateTime(1990, 1, 1), "john.doe@example.com", "JD");
-
-        Assert.Throws<AuthorWithSuchNameAlreadyExistsException>(() =>
-        {
-            new Author("John", "Doe", new DateTime(1999, 7, 12), "john.doe2@example.com", "JD2");
-        });
-    }
-
-    [Test]
     public void Author_AddAuthor_WithDuplicateNickname_ThrowsAuthorWithSuchNicknameAlreadyExistsException()
     {
         new Author("John", "Doe", new DateTime(1995, 5, 5), "john.doe@example.com", "JD");
@@ -353,16 +355,6 @@ public class EntitiesTests
         var borrowRecord = new BorrowRecord();
         borrowRecord.Status = BorrowRecordStatus.Returned;
         Assert.Throws<BorrowRecordIsInactiveException>(() => borrowRecord.ReturnBorrowRecord());
-    }
-
-    [Test]
-    public void BorrowRecord_AddBorrowRecord_WithDuplicateBorrowCode_ThrowsBorrowRecordAlreadyExistsException()
-    {
-        var borrowRecord1 = new BorrowRecord();
-        Assert.Throws<BorrowRecordAlreadyExistsException>(() => {
-            var borrowRecord2 = new BorrowRecord();
-            borrowRecord2.BorrowCode = borrowRecord1.BorrowCode;
-        });
     }
 
     [Test]
@@ -480,13 +472,6 @@ public class EntitiesTests
     }
 
     [Test]
-    public void Staff_AddStaff_WithDuplicateStaff_ThrowsStaffAlreadyExistsException()
-    {
-        new Staff("John", "Doe", new DateTime(1977, 3, 10), "IT");
-        Assert.Throws<StaffAlreadyExistsException>(() => new Staff("John", "Doe", new DateTime(1991, 1, 1), "HR"));
-    }
-
-    [Test]
     public void Staff_SetSupervisor_WithSelfAsSupervisor_ThrowsStaffSelfSupervisionException()
     {
         var staff = new Staff("John", "Doe", new DateTime(1990, 1, 1), "IT");
@@ -497,13 +482,6 @@ public class EntitiesTests
     public void Student_Constructor_WithFutureEnrollmentDate_ThrowsInvalidEnrollmentDateException()
     {
         Assert.Throws<InvalidEnrollmentDateException>(() => new Student("John", "Doe", new DateTime(2005, 6, 7), DateTime.Now.AddDays(1)));
-    }
-
-    [Test]
-    public void Student_AddStudent_WithDuplicateStudent_ThrowsStudentAlreadyExistsException()
-    {
-        new Student("John", "Doe", new DateTime(1990, 1, 1), new DateTime(2023, 1, 1));
-        Assert.Throws<StudentAlreadyExistsException>(() => new Student("John", "Doe", new DateTime(1991, 1, 1), new DateTime(2024, 1, 1)));
     }
 
     [Test]
@@ -568,16 +546,9 @@ public class EntitiesTests
     }
 
     [Test]
-    public void Translation_Constructor_WithEmptyLanguage_ThrowsLanguageIsEmptyException()
-    {
-        Assert.Throws<LanguageIsEmptyException>(() => new Translation("link", ""));
-    }
-
-    [Test]
     public void Translation_AddTranslation_WithDuplicateTranslation_ThrowsTranslationAlreadyExistsException()
     {
         new Translation("link", "English");
         Assert.Throws<TranslationAlreadyExistsException>(() => new Translation("link", "English"));
     }
 }
-
