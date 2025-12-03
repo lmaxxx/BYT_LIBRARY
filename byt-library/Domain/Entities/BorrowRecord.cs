@@ -11,6 +11,9 @@ public class BorrowRecord
     public DateTime? ReturnDate { get; set; }
     public BorrowRecordStatus Status { get; set; }
     public string BorrowCode { get; set; }
+    
+    private Payment? _payment;
+    public Payment? GetPayment() => _payment;
 
     public BorrowRecord()
     {
@@ -183,5 +186,37 @@ public class BorrowRecord
             _allBorrowRecords.Clear();
             _persistenceService.Save(_allBorrowRecords);
         }
+    }
+    
+    public void AddPayment(Payment payment)
+    {
+        if (payment == null)
+            throw new PaymentIsNullException(nameof(payment), "Payment cannot be null.");
+
+        if (_payment == payment)
+            return;
+
+        if (_payment != null)
+            throw new PaymentAlreadyAssignedException("BorrowRecord already has a Payment.");
+
+        if (payment.GetSubscription() != null)
+            throw new PaymentXorViolationException("Payment already belongs to a Subscription.");
+
+        _payment = payment;
+
+        if (payment.GetBorrowRecord() != this)
+            payment.AddBorrowRecord(this);
+    }
+    
+    public void RemovePayment()
+    {
+        if (_payment == null)
+            throw new PaymentIsNullException(nameof(_payment), "BorrowRecord has no payment assigned.");
+
+        var oldPayment = _payment;
+        _payment = null;
+
+        if (oldPayment.GetBorrowRecord() == this)
+            oldPayment.RemoveBorrowRecord();
     }
 }
