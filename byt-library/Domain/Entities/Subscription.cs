@@ -11,6 +11,7 @@ public class Subscription
     public DateTime EndDate { get; init; }
     
     private Student? _student;
+    private readonly HashSet<Payment> _payments = new();
 
     private static List<Subscription> _allSubscriptions = new();
     private static readonly object _lockSubscription = new();
@@ -151,10 +152,8 @@ public class Subscription
         _student = student;
 
         // reverse connection
-        if (!student.GetSubscriptions().Contains(this))
-        {
+        if (student.GetSubscription() != this)
             student.AddSubscription(this);
-        }
     }
 
     public void RemoveStudent()
@@ -166,9 +165,41 @@ public class Subscription
         _student = null;
 
         // reverse connection
-        if (oldStudent.GetSubscriptions().Contains(this))
-        {
-            oldStudent.RemoveSubscription(this);
-        }
+        if (oldStudent.GetSubscription() != this)
+            oldStudent.RemoveSubscription();
+    }
+    
+    public IReadOnlyCollection<Payment> GetPayments()
+        => _payments.ToList().AsReadOnly();
+    
+    public void AddPayment(Payment payment)
+    {
+        if (payment == null)
+            throw new PaymentIsNullException(nameof(payment), "Payment cannot be null.");
+
+        if (_payments.Contains(payment))
+            return;
+
+        if (payment.GetBorrowRecord() != null)
+            throw new PaymentXorViolationException("Payment already belongs to a BorrowRecord.");
+
+        _payments.Add(payment);
+
+        if (payment.GetSubscription() != this)
+            payment.AddSubscription(this);
+    }
+    
+    public void RemovePayment(Payment payment)
+    {
+        if (payment == null)
+            throw new PaymentIsNullException(nameof(payment), "Payment cannot be null.");
+
+        if (!_payments.Contains(payment))
+            return;
+
+        _payments.Remove(payment);
+
+        if (payment.GetSubscription() == this)
+            payment.RemoveSubscription();
     }
 }

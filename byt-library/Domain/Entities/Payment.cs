@@ -11,12 +11,15 @@ public class Payment
     public DateTime PaymentDate { get; init; }
     public PaymentMethod PaymentMethod { get; init; }
 
-    public Subscription? Subscription { get; init; }
-    public BorrowRecord? BorrowRecord { get; init; }
+    private Subscription? _subscription;  
+    private BorrowRecord? _borrowRecord;
 
     private static List<Payment> _allPayments = new();
     private static readonly object _lockPayment = new();
     private static readonly JsonPersistenceService _persistenceService = new("data");
+    
+    public Subscription? GetSubscription() => _subscription;
+    public BorrowRecord? GetBorrowRecord() => _borrowRecord;
 
     static Payment()
     {
@@ -50,10 +53,9 @@ public class Payment
     {
         if ((subscription == null && borrowRecord == null) ||
             (subscription != null && borrowRecord != null))
-        {
-            throw new PaymentIsNotAttachedException("Payment must be attached to exactly one of Subscription or BorrowRecord.");
-        }
-        
+            throw new PaymentXorViolationException(
+                "Payment must be attached to exactly one of Subscription or BorrowRecord.");
+
         if (amount <= 0)
             throw new InvalidAmountException();
 
@@ -61,9 +63,14 @@ public class Payment
         Amount = amount;
         PaymentDate = paymentDate;
         PaymentMethod = paymentMethod;
-        Subscription = subscription;
-        BorrowRecord = borrowRecord;
+
         AddPayment(this);
+
+        if (subscription != null)
+            AddSubscription(subscription);
+
+        if (borrowRecord != null)
+            AddBorrowRecord(borrowRecord);
     }
 
     private static void AddPayment(Payment payment)
@@ -129,5 +136,68 @@ public class Payment
             _allPayments.Clear();
             _persistenceService.Save(_allPayments);
         }
+    }
+    
+    public void AddSubscription(Subscription subscription)
+    {
+        if (subscription == null)
+            throw new SubscriptionIsNullException(nameof(subscription), "Subscription cannot be null.");
+
+        if (_borrowRecord != null)
+            throw new PaymentXorViolationException(
+                "Payment is already attached to a BorrowRecord; cannot attach a Subscription.");
+
+        if (_subscription == subscription)
+            return;
+
+        _subscription = subscription;
+
+        if (!subscription.GetPayments().Contains(this))
+            subscription.AddPayment(this);
+    }
+    
+    public void RemoveSubscription()
+    {
+        if (_subscription == null)
+            throw new SubscriptionIsNullException(nameof(_subscription), "Payment has no subscription to remove.");
+
+        var oldSub = _subscription;
+        _subscription = null;
+
+        if (oldSub.GetPayments().Contains(this))
+            oldSub.RemovePayment(this);
+    }
+    
+    public void AddBorrowRecord(BorrowRecord borrowRecord)
+    {
+        if (borrowRecord == null)
+            throw new BorrowRecordIsNullException(nameof(borrowRecord), "Borrow record cannot be null.");
+
+        if (_subscription != null)
+            throw new PaymentXorViolationException(
+                "Payment is already attached to a Subscription; cannot attach a BorrowRecord.");
+
+        if (_borrowRecord == borrowRecord)
+            return;
+
+        if (borrowRecord.GetPayment() != null)
+            throw new PaymentAlreadyAssignedException("BorrowRecord already has a Payment assigned.");
+
+        _borrowRecord = borrowRecord;
+
+        if (borrowRecord.GetPayment() != this)
+            borrowRecord.AddPayment(this);
+    }
+    
+    public void RemoveBorrowRecord()
+    {
+        if (_borrowRecord == null)
+            throw new BorrowRecordIsNullException(nameof(_borrowRecord), "Payment has no BorrowRecord to remove.");
+
+        var oldBr = _borrowRecord;
+        _borrowRecord = null;
+
+        if (oldBr.GetPayment() == this)
+            oldBr.RemovePayment();
     }
 }

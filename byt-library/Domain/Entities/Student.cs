@@ -8,7 +8,7 @@ public class Student : Person
 {
     public DateTime EnrollmentDate { get; set; }
     
-    private readonly HashSet<Subscription> _subscriptions = new();
+    private Subscription? _subscription;
     
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
@@ -145,9 +145,9 @@ public class Student : Person
         return base.ToString() + $" - Enrolled: {EnrollmentDate:yyyy-MM-dd}";
     }
     
-    public IReadOnlyCollection<Subscription> GetSubscriptions()
+    public Subscription? GetSubscription()
     {
-        return _subscriptions.ToList().AsReadOnly(); // return copy
+        return _subscription; 
     }
 
     public void AddSubscription(Subscription subscription)
@@ -155,45 +155,42 @@ public class Student : Person
         if (subscription == null)
             throw new SubscriptionIsNullException(nameof(subscription), "Subscription must exist.");
 
-        if (_subscriptions.Contains(subscription))
-            return;
+        // student can have only 1 subscription
+        if (_subscription != null)
+            throw new SubscriptionAlreadyBelongsException("Student already has a subscription.");
 
-        // subscription can belong to only ONE student
+        // subscription must not belong to a different student
         if (subscription.GetStudent() != null && subscription.GetStudent() != this)
-            throw new SubscriptionAlreadyBelongsException("This subscription already belongs to another student.");
+            throw new SubscriptionAlreadyBelongsException("Subscription belongs to another student.");
 
-        _subscriptions.Add(subscription);
+        _subscription = subscription;
 
         // reverse connection
-        subscription.SetStudent(this);
+        if (subscription.GetStudent() != this)
+            subscription.SetStudent(this);
     }
 
-    public void RemoveSubscription(Subscription subscription)
+    public void RemoveSubscription()
     {
-        if (subscription == null)
-            throw new SubscriptionIsNullException(nameof(subscription), "Subscription must exist.");
+        if (_subscription == null)
+            throw new SubscriptionIsNotAssignedException("Student has no subscription to remove.");
 
-        if (!_subscriptions.Contains(subscription))
-            return;
-
-        _subscriptions.Remove(subscription);
+        var oldSub = _subscription;
+        _subscription = null;
 
         // reverse connection
-        subscription.RemoveStudent();
+        oldSub.RemoveStudent();
     }
     
-    public void UpdateSubscription(Subscription oldSub, Subscription newSub)
+    public void UpdateSubscription(Subscription newSub)
     {
-        if (oldSub == null)
-            throw new SubscriptionIsNullException(nameof(oldSub), "Subscription must exist.");
-        
-        if (newSub == null) 
+        if (newSub == null)
             throw new SubscriptionIsNullException(nameof(newSub), "Subscription must exist.");
 
-        if (!_subscriptions.Contains(oldSub))
-            throw new SubscriptionIsNotAssignedException("Old subscription is not assigned to this student.");
+        if (_subscription != null)
+            throw new SubscriptionIsNotAssignedException("Student has no subscription to update.");
 
-        RemoveSubscription(oldSub);
+        RemoveSubscription();
         AddSubscription(newSub);
     }
 
