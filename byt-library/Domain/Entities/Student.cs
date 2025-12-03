@@ -187,10 +187,10 @@ public class Student : Person
         if (newSub == null)
             throw new SubscriptionIsNullException(nameof(newSub), "Subscription must exist.");
 
-        // Remove old one if exists
         if (_subscription != null)
-            RemoveSubscription();
+            throw new SubscriptionIsNotAssignedException("Student has no subscription to update.");
 
+        RemoveSubscription();
         AddSubscription(newSub);
     }
 
