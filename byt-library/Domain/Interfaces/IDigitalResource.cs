@@ -15,8 +15,21 @@ public interface IDigitalResource : IResource
         {
             throw new NotSupportedException("Language is not supported");
         }
-        
-        Translations.Add(new Translation { Language = language, Link = $"{Link}/{language}" });
+
+        var translation = Translation.CreateFor(this, language, $"{Link}/{language}");
+        Translations.Add(translation);
+    }
+
+    public void RemoveTranslation(string language)
+    {
+        var translation = Translations.FirstOrDefault(t =>
+            t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
+
+        if (translation != null)
+        {
+            Translation.RemoveTranslation(translation.Link, translation.Language);
+            Translations.Remove(translation);
+        }
     }
     
 }

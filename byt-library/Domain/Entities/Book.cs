@@ -101,14 +101,38 @@ public class Book : IDigitalResource, IPrintedResource
 
     public static bool RemoveBook(string isbn)
     {
-        lock (_lockBook)
+        lock (Translation._lockTranslation)  // Lock order: Translation first to prevent deadlock
         {
-            var book = _allBooks.FirstOrDefault(b => b.ISBN.Equals(isbn, StringComparison.OrdinalIgnoreCase));
-            if (book != null)
+            lock (_lockBook)
             {
-                return _allBooks.Remove(book);
+                var book = _allBooks.FirstOrDefault(b =>
+                    b.ISBN.Equals(isbn, StringComparison.OrdinalIgnoreCase));
+
+                if (book != null)
+                {
+                    // Cascade delete: remove all translations for this book
+                    Translation.RemoveTranslationsByOwner(book);
+
+                    bool removed = _allBooks.Remove(book);
+
+                    if (removed)
+                    {
+                        try
+                        {
+                            _persistenceService.Save(_allBooks);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Rollback: re-add book if persistence fails
+                            _allBooks.Add(book);
+                            throw new InvalidOperationException("Failed to persist Book removal", ex);
+                        }
+                    }
+
+                    return removed;
+                }
+                return false;
             }
-            return false;
         }
     }
 

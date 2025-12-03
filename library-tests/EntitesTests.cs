@@ -534,21 +534,74 @@ public class EntitiesTests
     }
 
     [Test]
-    public void Translation_Constructor_WithUnsupportedLanguage_ThrowsUnsupportedLanguageException()
+    public void Translation_CannotBeSharedBetweenOwners()
     {
-        Assert.Throws<UnsupportedLanguageException>(() => new Translation("link", "German"));
+        IDigitalResource book1 = new Book("ISBN1", "Book 1", "Desc", link: "http://book1.com");
+        IDigitalResource book2 = new Book("ISBN2", "Book 2", "Desc", link: "http://book2.com");
+
+        book1.AddTranslation("english");
+
+        // Try to add same translation to different book - should create new translation
+        book2.AddTranslation("english");
+
+        // Verify each book has its own translation
+        Assert.That(book1.Translations.Count, Is.EqualTo(1));
+        Assert.That(book2.Translations.Count, Is.EqualTo(1));
+        Assert.That(book1.Translations[0], Is.Not.EqualTo(book2.Translations[0]));
     }
 
     [Test]
-    public void Translation_Constructor_WithEmptyLink_ThrowsLinkIsEmptyException()
+    public void Book_RemoveBook_CascadesDeleteToTranslations()
     {
-        Assert.Throws<LinkIsEmptyException>(() => new Translation("", "English"));
+        IDigitalResource book = new Book("ISBN123", "Test Book", "Description", link: "http://book.com");
+        book.AddTranslation("english");
+        book.AddTranslation("polish");
+
+        Assert.That(Translation.GetAllTranslations().Count, Is.EqualTo(2));
+
+        Book.RemoveBook("ISBN123");
+
+        Assert.That(Translation.GetAllTranslations().Count, Is.EqualTo(0));
     }
 
     [Test]
-    public void Translation_AddTranslation_WithDuplicateTranslation_ThrowsTranslationAlreadyExistsException()
+    public void OnlineMagazine_RemoveOnlineMagazine_CascadesDeleteToTranslations()
     {
-        new Translation("link", "English");
-        Assert.Throws<TranslationAlreadyExistsException>(() => new Translation("link", "English"));
+        IDigitalResource magazine = new OnlineMagazine("http://mag.com", "Test Mag", "Description",
+                                          link: "http://mag.com/content");
+        magazine.AddTranslation("english");
+        magazine.AddTranslation("ukrainian");
+
+        Assert.That(Translation.GetAllTranslations().Count, Is.EqualTo(2));
+
+        OnlineMagazine.RemoveOnlineMagazine("http://mag.com");
+
+        Assert.That(Translation.GetAllTranslations().Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Translation_HasOwnerReference()
+    {
+        IDigitalResource book = new Book("ISBN456", "Test Book", "Description", link: "http://book.com");
+        book.AddTranslation("english");
+
+        var translation = book.Translations[0];
+
+        Assert.That(translation.Owner, Is.Not.Null);
+        Assert.That(translation.Owner, Is.EqualTo(book));
+    }
+
+    [Test]
+    public void Translation_OwnerReference_PersistsAndResolves()
+    {
+        IDigitalResource book = new Book("ISBN789", "Test Book", "Description", link: "http://book.com");
+        book.AddTranslation("polish");
+
+        // Get the translation from extent (simulating reload)
+        var translation = Translation.GetAllTranslations()[0];
+
+        Assert.That(translation.Owner, Is.Not.Null);
+        Assert.That(translation.OwnerId, Is.EqualTo("ISBN789"));
+        Assert.That(translation.Owner, Is.InstanceOf<Book>());
     }
 }
