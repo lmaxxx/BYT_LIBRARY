@@ -54,7 +54,7 @@ public class Payment
         if ((subscription == null && borrowRecord == null) ||
             (subscription != null && borrowRecord != null))
             throw new PaymentXorViolationException(
-                "Payment must be attached to EXACTLY ONE of: Subscription XOR BorrowRecord.");
+                "Payment must be attached to exactly one of Subscription or BorrowRecord.");
 
         if (amount <= 0)
             throw new InvalidAmountException();

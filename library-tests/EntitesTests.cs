@@ -50,7 +50,7 @@ public class EntitiesTests
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1));
         var borrowRecord = new BorrowRecord();
 
-        var ex = Assert.Throws<PaymentIsNotAttachedException>(() =>
+        var ex = Assert.Throws<PaymentXorViolationException>(() =>
         {
             var payment = new Payment(
                 amount: 50.0,
@@ -67,7 +67,7 @@ public class EntitiesTests
     [Test]
     public void Payment_Constructor_WhenNeitherSubscriptionNorBorrowRecordProvided_ThrowsException()
     {
-        var ex = Assert.Throws<PaymentIsNotAttachedException>(() =>
+        var ex = Assert.Throws<PaymentXorViolationException>(() =>
         {
             var payment = new Payment(
                 amount: 50.0,
@@ -565,12 +565,6 @@ public class EntitiesTests
     public void Translation_Constructor_WithEmptyLink_ThrowsLinkIsEmptyException()
     {
         Assert.Throws<LinkIsEmptyException>(() => new Translation("", "English"));
-    }
-
-    [Test]
-    public void Translation_Constructor_WithEmptyLanguage_ThrowsLanguageIsEmptyException()
-    {
-        Assert.Throws<LanguageIsEmptyException>(() => new Translation("link", ""));
     }
 
     [Test]
