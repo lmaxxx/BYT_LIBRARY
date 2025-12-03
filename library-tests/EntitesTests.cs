@@ -529,7 +529,7 @@ public class EntitiesTests
         var student = new Student("John", "Kolins", new DateTime(1990, 1, 1), new DateTime(2023, 1, 1));
         var oldSub = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1));
         var newSub = new Subscription(DateTime.Now, DateTime.Now.AddMonths(2));
-        Assert.Throws<SubscriptionIsNotAssignedException>(() => student.UpdateSubscription(oldSub, newSub));
+        Assert.Throws<SubscriptionIsNotAssignedException>(() => student.UpdateSubscription(newSub));
     }
 
     [Test]

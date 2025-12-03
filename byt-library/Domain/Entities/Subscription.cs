@@ -151,10 +151,8 @@ public class Subscription
         _student = student;
 
         // reverse connection
-        if (!student.GetSubscriptions().Contains(this))
-        {
+        if (student.GetSubscription() != this)
             student.AddSubscription(this);
-        }
     }
 
     public void RemoveStudent()
@@ -166,9 +164,7 @@ public class Subscription
         _student = null;
 
         // reverse connection
-        if (oldStudent.GetSubscriptions().Contains(this))
-        {
-            oldStudent.RemoveSubscription(this);
-        }
+        if (oldStudent.GetSubscription() != this)
+            oldStudent.RemoveSubscription();
     }
 }
