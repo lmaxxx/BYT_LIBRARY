@@ -92,14 +92,38 @@ public class OnlineMagazine : IDigitalResource
 
     public static bool RemoveOnlineMagazine(string pageLink)
     {
-        lock (_lockOnlineMagazine)
+        lock (Translation._lockTranslation)  // Lock order: Translation first to prevent deadlock
         {
-            var onlineMagazine = _allOnlineMagazines.FirstOrDefault(om => om.PageLink.Equals(pageLink, StringComparison.OrdinalIgnoreCase));
-            if (onlineMagazine != null)
+            lock (_lockOnlineMagazine)
             {
-                return _allOnlineMagazines.Remove(onlineMagazine);
+                var onlineMagazine = _allOnlineMagazines.FirstOrDefault(om =>
+                    om.PageLink.Equals(pageLink, StringComparison.OrdinalIgnoreCase));
+
+                if (onlineMagazine != null)
+                {
+                    // Cascade delete: remove all translations for this magazine
+                    Translation.RemoveTranslationsByOwner(onlineMagazine);
+
+                    bool removed = _allOnlineMagazines.Remove(onlineMagazine);
+
+                    if (removed)
+                    {
+                        try
+                        {
+                            _persistenceService.Save(_allOnlineMagazines);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Rollback: re-add if persistence fails
+                            _allOnlineMagazines.Add(onlineMagazine);
+                            throw new InvalidOperationException("Failed to persist OnlineMagazine removal", ex);
+                        }
+                    }
+
+                    return removed;
+                }
+                return false;
             }
-            return false;
         }
     }
 
