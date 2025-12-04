@@ -50,7 +50,7 @@ public class Translation
     }
 
     private static List<Translation> _allTranslations = new();
-    internal static readonly object _lockTranslation = new();
+    public static readonly object _lockTranslation = new();
     private static readonly JsonPersistenceService _persistenceService = new("data");
     public static readonly List<string> _supportedLanguages = ["polish", "english", "ukrainian"];
 
@@ -60,7 +60,7 @@ public class Translation
         {
             var loadedItems = _persistenceService.Load<Translation>();
 
-            // STRICT VALIDATION: Ensure all translations have valid owners
+            // Ensure all translations have valid owners
             ValidateTranslationsHaveOwners(loadedItems);
 
             lock (_lockTranslation)
@@ -74,7 +74,7 @@ public class Translation
         }
         catch (CompositionConstraintViolationException)
         {
-            // Re-throw composition violations to fail fast
+            Console.Error.WriteLine("Composition constraint violation detected");
             throw;
         }
         catch (Exception ex)
@@ -84,8 +84,8 @@ public class Translation
         }
     }
 
-    // Make parameterless constructor internal (needed for JSON deserialization)
-    internal Translation() { }
+    // Make parameterless constructor (needed for JSON deserialization)
+    public Translation() { }
 
     // Make parameterized constructor private (prevent direct instantiation)
     private Translation(string link, string language)
@@ -99,7 +99,7 @@ public class Translation
     }
 
     // Factory method for creating translations with owner
-    internal static Translation CreateFor(IDigitalResource owner, string language, string link)
+    public static Translation CreateFor(IDigitalResource owner, string language, string link)
     {
         if (owner == null)
             throw new TranslationOwnerIsNullException("Translation must have an owner");
@@ -176,7 +176,7 @@ public class Translation
     }
 
     // Bulk removal method for cascading delete
-    internal static void RemoveTranslationsByOwner(IDigitalResource owner)
+    public static void RemoveTranslationsByOwner(IDigitalResource owner)
     {
         if (owner == null) return;
 
@@ -225,8 +225,7 @@ public class Translation
     {
         lock (_lockTranslation)
         {
-            return _allTranslations.FirstOrDefault(t => t.Link.Equals(link, StringComparison.OrdinalIgnoreCase) &&
-                                                        t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
+            return _allTranslations.FirstOrDefault(t => t.Link.Equals(link, StringComparison.OrdinalIgnoreCase) && t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
         }
     }
 
