@@ -551,4 +551,378 @@ public class EntitiesTests
         new Translation("link", "English");
         Assert.Throws<TranslationAlreadyExistsException>(() => new Translation("link", "English"));
     }
+
+    [Test]
+    public void Person_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalPerson = new Person("John", "Doe", new DateTime(1990, 1, 1), "john.doe@example.com");
+            var personList = new List<Person> { originalPerson };
+
+            persistenceService.Save(personList);
+            var loadedPeople = persistenceService.Load<Person>();
+
+            Assert.That(loadedPeople, Is.Not.Null);
+            Assert.That(loadedPeople, Has.Count.EqualTo(1));
+
+            var loadedPerson = loadedPeople[0];
+            Assert.That(loadedPerson.FirstName, Is.EqualTo("John"));
+            Assert.That(loadedPerson.LastName, Is.EqualTo("Doe"));
+            Assert.That(loadedPerson.DateOfBirth, Is.EqualTo(new DateTime(1990, 1, 1)));
+            Assert.That(loadedPerson.Email, Is.EqualTo("john.doe@example.com"));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Author_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalAuthor = new Author("Ben", "White", new DateTime(1976, 12, 16), "ben.white@gmail.com", "Classic");
+            var authorList = new List<Author> { originalAuthor };
+
+            persistenceService.Save(authorList);
+            var loadedAuthors = persistenceService.Load<Author>();
+
+            Assert.That(loadedAuthors, Is.Not.Null);
+            Assert.That(loadedAuthors, Has.Count.EqualTo(1));
+
+            var loadedAuthor = loadedAuthors[0];
+            Assert.That(loadedAuthor.FirstName, Is.EqualTo("Ben"));
+            Assert.That(loadedAuthor.LastName, Is.EqualTo("White"));
+            Assert.That(loadedAuthor.DateOfBirth, Is.EqualTo(new DateTime(1976, 12, 16)));
+            Assert.That(loadedAuthor.Email, Is.EqualTo("ben.white@gmail.com"));
+            Assert.That(loadedAuthor.Nickname, Is.EqualTo("Classic"));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Student_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var enrollmentDate = new DateTime(2023, 9, 1);
+            var originalStudent = new Student("Harry", "Potter", new DateTime(1980, 7, 31), enrollmentDate);
+            var studentList = new List<Student> { originalStudent };
+
+            persistenceService.Save(studentList);
+            var loadedStudents = persistenceService.Load<Student>();
+
+            Assert.That(loadedStudents, Is.Not.Null);
+            Assert.That(loadedStudents, Has.Count.EqualTo(1));
+
+            var loadedStudent = loadedStudents[0];
+            Assert.That(loadedStudent.FirstName, Is.EqualTo("Harry"));
+            Assert.That(loadedStudent.LastName, Is.EqualTo("Potter"));
+            Assert.That(loadedStudent.DateOfBirth, Is.EqualTo(new DateTime(1980, 7, 31)));
+            Assert.That(loadedStudent.EnrollmentDate, Is.EqualTo(enrollmentDate));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Staff_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            Staff.ClearStaffExtent();
+            Person.ClearExtent();
+
+            var supervisor = new Staff("Minerva", "McGonagall", new DateTime(1935, 10, 4), "Transfiguration");
+            var originalStaff = new Staff("Albus", "Dumbledore", new DateTime(1881, 8, 1), "Headmaster");
+            originalStaff.SetSupervisor(supervisor);
+
+            var staffList = new List<Staff> { originalStaff, supervisor };
+
+            persistenceService.Save(staffList);
+            var loadedStaffList = persistenceService.Load<Staff>();
+
+            Assert.That(loadedStaffList, Is.Not.Null);
+            Assert.That(loadedStaffList, Has.Count.EqualTo(2));
+
+            var loadedDumbledore = loadedStaffList.First(s => s.FirstName == "Albus");
+            var loadedMcGonagall = loadedStaffList.First(s => s.FirstName == "Minerva");
+
+            Assert.That(loadedDumbledore.FirstName, Is.EqualTo("Albus"));
+            Assert.That(loadedDumbledore.LastName, Is.EqualTo("Dumbledore"));
+            Assert.That(loadedDumbledore.Department, Is.EqualTo("Headmaster"));
+            Assert.That(loadedDumbledore.GetSupervisor(), Is.Not.Null);
+            Assert.That(loadedDumbledore.GetSupervisor().FirstName, Is.EqualTo("Minerva"));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Book_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalBook = new Book("978-0439708180", "Harry Potter and the Sorcerer's Stone", "First book in the series")
+            {
+                HasAudio = true,
+                Quantity = 10,
+                Size = 500,
+                Link = "http://example.com/hp1",
+                CoverType = CoverType.Hard
+            };
+            var bookList = new List<Book> { originalBook };
+
+            persistenceService.Save(bookList);
+            var loadedBooks = persistenceService.Load<Book>();
+
+            Assert.That(loadedBooks, Is.Not.Null);
+            Assert.That(loadedBooks, Has.Count.EqualTo(1));
+
+            var loadedBook = loadedBooks[0];
+            Assert.That(loadedBook.ISBN, Is.EqualTo("978-0439708180"));
+            Assert.That(loadedBook.Title, Is.EqualTo("Harry Potter and the Sorcerer's Stone"));
+            Assert.That(loadedBook.Description, Is.EqualTo("First book in the series"));
+            Assert.That(loadedBook.HasAudio, Is.True);
+            Assert.That(loadedBook.Quantity, Is.EqualTo(10));
+            Assert.That(loadedBook.Size, Is.EqualTo(500));
+            Assert.That(loadedBook.Link, Is.EqualTo("http://example.com/hp1"));
+            Assert.That(loadedBook.CoverType, Is.EqualTo(CoverType.Hard));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Catalog_SaveAndLoad_PreservesAllProperties()
+    {
+        //var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var testDirectory = Path.Combine(Path.GetTempPath(), "data");
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalCatalog = new Catalog("Fiction");
+            var catalogList = new List<Catalog> { originalCatalog };
+
+            persistenceService.Save(catalogList);
+            var loadedCatalogs = persistenceService.Load<Catalog>();
+
+            Assert.That(loadedCatalogs, Is.Not.Null);
+            Assert.That(loadedCatalogs, Has.Count.EqualTo(1));
+
+            var loadedCatalog = loadedCatalogs[0];
+            Assert.That(loadedCatalog.Name, Is.EqualTo("Fiction"));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Newspaper_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalNewspaper = new Newspaper("Daily Prophet", "War is Over", "Voldemort defeated", quantity: 100);
+            var newspaperList = new List<Newspaper> { originalNewspaper };
+
+            persistenceService.Save(newspaperList);
+            var loadedNewspapers = persistenceService.Load<Newspaper>();
+
+            Assert.That(loadedNewspapers, Is.Not.Null);
+            Assert.That(loadedNewspapers, Has.Count.EqualTo(1));
+
+            var loadedNewspaper = loadedNewspapers[0];
+            Assert.That(loadedNewspaper.Publisher, Is.EqualTo("Daily Prophet"));
+            Assert.That(loadedNewspaper.Title, Is.EqualTo("War is Over"));
+            Assert.That(loadedNewspaper.Description, Is.EqualTo("Voldemort defeated"));
+            Assert.That(loadedNewspaper.Quantity, Is.EqualTo(100));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void OnlineMagazine_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalMagazine = new OnlineMagazine("http://witchweekly.com/latest", "Witch Weekly", "Latest issue")
+            {
+                Size = 20,
+                HasAudio = false,
+            };
+            var magazineList = new List<OnlineMagazine> { originalMagazine };
+
+            persistenceService.Save(magazineList);
+            var loadedMagazines = persistenceService.Load<OnlineMagazine>();
+
+            Assert.That(loadedMagazines, Is.Not.Null);
+            Assert.That(loadedMagazines, Has.Count.EqualTo(1));
+
+            var loadedMagazine = loadedMagazines[0];
+            Assert.That(loadedMagazine.PageLink, Is.EqualTo("http://witchweekly.com/latest"));
+            Assert.That(loadedMagazine.Title, Is.EqualTo("Witch Weekly"));
+            Assert.That(loadedMagazine.Description, Is.EqualTo("Latest issue"));
+            Assert.That(loadedMagazine.Size, Is.EqualTo(20));
+            Assert.That(loadedMagazine.HasAudio, Is.False);
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Translation_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var originalTranslation = new Translation("http://example.com/hp1/pl", "Polish");
+            var translationList = new List<Translation> { originalTranslation };
+
+            persistenceService.Save(translationList);
+            var loadedTranslations = persistenceService.Load<Translation>();
+
+            Assert.That(loadedTranslations, Is.Not.Null);
+            Assert.That(loadedTranslations, Has.Count.EqualTo(1));
+
+            var loadedTranslation = loadedTranslations[0];
+            Assert.That(loadedTranslation.Link, Is.EqualTo("http://example.com/hp1/pl"));
+            Assert.That(loadedTranslation.Language, Is.EqualTo("Polish"));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Subscription_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var startDate = new DateTime(2025, 1, 1);
+            var endDate = new DateTime(2025, 12, 31);
+            var originalSubscription = new Subscription(startDate, endDate);
+            var subscriptionList = new List<Subscription> { originalSubscription };
+
+            persistenceService.Save(subscriptionList);
+            var loadedSubscriptions = persistenceService.Load<Subscription>();
+
+            Assert.That(loadedSubscriptions, Is.Not.Null);
+            Assert.That(loadedSubscriptions, Has.Count.EqualTo(1));
+
+            var loadedSubscription = loadedSubscriptions[0];
+            Assert.That(loadedSubscription.StartDate, Is.EqualTo(startDate));
+            Assert.That(loadedSubscription.EndDate, Is.EqualTo(endDate));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public void Payment_SaveAndLoad_PreservesAllProperties()
+    {
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
+        var persistenceService = new JsonPersistenceService(testDirectory);
+
+        try
+        {
+            var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1));
+            var originalPayment = new Payment(100, DateTime.Now, PaymentMethod.ByCard, subscription: subscription);
+            var paymentList = new List<Payment> { originalPayment };
+
+            persistenceService.Save(paymentList);
+            var loadedPayments = persistenceService.Load<Payment>();
+
+            Assert.That(loadedPayments, Is.Not.Null);
+            Assert.That(loadedPayments, Has.Count.EqualTo(1));
+
+            var loadedPayment = loadedPayments[0];
+            Assert.That(loadedPayment.Amount, Is.EqualTo(100));
+            Assert.That(loadedPayment.PaymentMethod, Is.EqualTo(PaymentMethod.ByCard));
+        }
+        finally
+        {
+            if (Directory.Exists(testDirectory))
+            {
+                Directory.Delete(testDirectory, true);
+            }
+        }
+    }
 }
