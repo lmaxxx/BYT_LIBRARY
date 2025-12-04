@@ -11,7 +11,7 @@ public class Translation
     public string Language { get; set; }
 
     // Owner tracking fields
-    private string? _ownerId;  // ISBN for Book, PageLink for OnlineMagazine
+    private string _ownerId;  // ISBN for Book, PageLink for OnlineMagazine
     private IDigitalResource? _ownerCache;  // Resolved reference
 
     // Property for JSON serialization
@@ -84,37 +84,24 @@ public class Translation
         }
     }
 
-    // Make parameterless constructor (needed for JSON deserialization)
-    public Translation() { }
-
-    // Make parameterized constructor private (prevent direct instantiation)
-    private Translation(string link, string language)
-    {
+    // Make constructor enforce owner
+    public Translation(string link, string language, IDigitalResource owner) { 
         if (!_supportedLanguages.Contains(language.ToLower()))
             throw new UnsupportedLanguageException($"Language '{language}' is not supported.");
 
+        if (owner == null)
+            throw new TranslationOwnerIsNullException("Translation must have an owner");
+
         Link = link;
         Language = language;
+        Owner = owner;
         AddTranslation(this);
     }
 
     // Factory method for creating translations with owner
     public static Translation CreateFor(IDigitalResource owner, string language, string link)
     {
-        if (owner == null)
-            throw new TranslationOwnerIsNullException("Translation must have an owner");
-
-        if (!_supportedLanguages.Contains(language.ToLower()))
-            throw new UnsupportedLanguageException($"Language '{language}' is not supported.");
-
-        var translation = new Translation
-        {
-            Link = link,
-            Language = language,
-            Owner = owner  // Sets both _ownerCache and _ownerId
-        };
-
-        AddTranslation(translation);
+        var translation = new Translation(link, language, owner);
         return translation;
     }
 

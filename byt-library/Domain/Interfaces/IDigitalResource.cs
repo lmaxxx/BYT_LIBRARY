@@ -16,7 +16,7 @@ public interface IDigitalResource : IResource
             throw new NotSupportedException("Language is not supported");
         }
 
-        var translation = Translation.CreateFor(this, language, $"{Link}/{language}");
+        var translation = new Translation($"{Link}/{language}", language, this);
         Translations.Add(translation);
     }
 
