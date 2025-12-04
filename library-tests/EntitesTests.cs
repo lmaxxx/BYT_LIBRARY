@@ -737,8 +737,7 @@ public class EntitiesTests
     [Test]
     public void Catalog_SaveAndLoad_PreservesAllProperties()
     {
-        //var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
-        var testDirectory = Path.Combine(Path.GetTempPath(), "data");
+        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
         var persistenceService = new JsonPersistenceService(testDirectory);
 
         try
