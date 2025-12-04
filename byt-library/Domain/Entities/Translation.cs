@@ -98,13 +98,6 @@ public class Translation
         AddTranslation(this);
     }
 
-    // Factory method for creating translations with owner
-    public static Translation CreateFor(IDigitalResource owner, string language, string link)
-    {
-        var translation = new Translation(link, language, owner);
-        return translation;
-    }
-
     // Validation method for loaded translations
     private static void ValidateTranslationsHaveOwners(List<Translation> translations)
     {
