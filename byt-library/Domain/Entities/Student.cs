@@ -177,9 +177,6 @@ public class Student : Person
 
         var oldSub = _subscription;
         _subscription = null;
-
-        // reverse connection
-        oldSub.RemoveStudent();
     }
     
     public void UpdateSubscription(Subscription newSub)
@@ -187,7 +184,7 @@ public class Student : Person
         if (newSub == null)
             throw new SubscriptionIsNullException(nameof(newSub), "Subscription must exist.");
 
-        if (_subscription != null)
+        if (_subscription == null)
             throw new SubscriptionIsNotAssignedException("Student has no subscription to update.");
 
         RemoveSubscription();
