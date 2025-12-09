@@ -68,7 +68,7 @@ public class Payment
 
         if (subscription != null)
             AddSubscription(subscription);
-
+                
         if (borrowRecord != null)
             AddBorrowRecord(borrowRecord);
     }

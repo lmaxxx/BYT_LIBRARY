@@ -10,7 +10,7 @@ public class Subscription
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
     
-    private Student? _student;
+    private Student _student;
     private readonly HashSet<Payment> _payments = new();
 
     private static List<Subscription> _allSubscriptions = new();
@@ -40,15 +40,26 @@ public class Subscription
 
     public Subscription() { }
 
-    public Subscription(DateTime startDate, DateTime endDate)
+    public Subscription(DateTime startDate, DateTime endDate, Student student, ICollection<Payment> payments)
     {
         if (endDate <= startDate)
             throw new InvalidDateRangeException("End date must be after start date.");
         
+        if (student == null)
+            throw new StudentIsNullException(nameof(student), "Subscription must have a student");
+        
+        if (payments == null || !payments.Any())
+            throw new PaymentIsNullException(nameof(payments), "Subscription must have at least one payment");
+        
         SubscriptionCode = $"SUB-{Guid.NewGuid()}";
         StartDate = startDate;
         EndDate = endDate;
-        AddSubscription(this);
+        
+        AddSubscription(this);  // create subscription
+        SetStudent(student);  // assign student
+        
+        foreach (var payment in payments)
+            AddPayment(payment);    // assign each payment
     }
 
     public bool IsActive()
@@ -154,19 +165,6 @@ public class Subscription
         // reverse connection
         if (student.GetSubscription() != this)
             student.AddSubscription(this);
-    }
-
-    public void RemoveStudent()
-    {
-        if (_student == null)
-            return;
-
-        var oldStudent = _student;
-        _student = null;
-
-        // reverse connection
-        if (oldStudent.GetSubscription() != this)
-            oldStudent.RemoveSubscription();
     }
     
     public IReadOnlyCollection<Payment> GetPayments()
