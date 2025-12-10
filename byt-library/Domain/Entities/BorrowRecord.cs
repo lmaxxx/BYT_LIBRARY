@@ -31,6 +31,7 @@ public class BorrowRecord
         else
             GenerateBorrowCode();
         this._student = _student;
+        _student.AddBorrowRecord(this);
         this._resource = _resource;
         this._payment = _payment;
         AddBorrowRecord(this);
