@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using byt_library.Domain.Interfaces;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
@@ -12,7 +13,8 @@ public class OnlineMagazine : IDigitalResource
     public string Description { get; set; }
     public int Size { get; set; }
     public string Link { get; set; }
-    public List<Translation> Translations { get; set; }
+    [JsonInclude]
+    private readonly HashSet<Translation> _translations = new();
 
     private static List<OnlineMagazine> _allOnlineMagazines = new();
     private static readonly object _lockOnlineMagazine = new();
@@ -41,11 +43,12 @@ public class OnlineMagazine : IDigitalResource
 
     public OnlineMagazine()
     {
-        Translations = new List<Translation>();
+        _translations = new HashSet<Translation>();
     }
 
+    [JsonConstructor]
     public OnlineMagazine(string pageLink, string title, string description,
-                          bool hasAudio = false, int size = 0, string link = "")
+                          bool hasAudio = false, int size = 0, string link = "", HashSet<Translation>? _translations = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new TitleIsEmptyException("Online Magazine title cannot be empty");
@@ -59,7 +62,7 @@ public class OnlineMagazine : IDigitalResource
         HasAudio = hasAudio;
         Size = size;
         Link = link;
-        Translations = new List<Translation>();
+        this._translations = _translations ?? new HashSet<Translation>();
         AddOnlineMagazine(this);
     }
 
@@ -103,24 +106,7 @@ public class OnlineMagazine : IDigitalResource
                 {
                     // Cascade delete: remove all translations for this magazine
                     Translation.RemoveTranslationsByOwner(onlineMagazine);
-
-                    bool removed = _allOnlineMagazines.Remove(onlineMagazine);
-
-                    if (removed)
-                    {
-                        try
-                        {
-                            _persistenceService.Save(_allOnlineMagazines);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Rollback: re-add if persistence fails
-                            _allOnlineMagazines.Add(onlineMagazine);
-                            throw new InvalidOperationException("Failed to persist OnlineMagazine removal", ex);
-                        }
-                    }
-
-                    return removed;
+                    return _allOnlineMagazines.Remove(onlineMagazine);
                 }
                 return false;
             }
@@ -143,11 +129,41 @@ public class OnlineMagazine : IDigitalResource
         }
     }
 
+    public void AddTranslation(string language)
+    {
+        // Ensure there is no other translation with such a language already
+        if (_translations.FirstOrDefault(translation =>
+                translation.Language.Equals(language, StringComparison.OrdinalIgnoreCase)) != null)
+        {
+            throw new TranslationAlreadyExistsException(language);
+        }
+        // Translation automatically adds owner. Adding it to hashset ensures both objects have each other and no other can access this relationship.
+        _translations.Add(new Translation($"https://some.storage/online-magazines/{PageLink}/{language}", language,
+            PageLink));
+    }
+
+    public bool RemoveTranslation(string language)
+    {
+        // Remove translation from class extent
+        Translation? translation = _translations.FirstOrDefault(translation =>
+            translation.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
+
+        if (translation == null) return false;
+        
+        if (Translation.RemoveTranslation(translation.Link, translation.Language))
+        {
+            _translations.RemoveWhere(t => t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
+            return true;
+        }
+
+        return false;
+    }
+
     public static void ClearOnlineMagazineExtent()
     {
         lock (_lockOnlineMagazine)
         {
-            _allOnlineMagazines.Clear();
+            while (_allOnlineMagazines.Count != 0) RemoveOnlineMagazine(_allOnlineMagazines.Last().PageLink);  // Properly removes all the magazines, including translations.
             _persistenceService.Save(_allOnlineMagazines);
         }
     }

@@ -1,6 +1,8 @@
+using byt_library.Domain.Enums;
 using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
+using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
@@ -13,6 +15,8 @@ public class Student : Person
     private static List<Student> _allStudents = new();
     private static readonly object _lockStudent = new();
     private static readonly JsonPersistenceService _persistenceService = new("data");
+    
+    private readonly HashSet<BorrowRecord> _borrowRecords = new();
 
     static Student()
     {
@@ -42,8 +46,25 @@ public class Student : Person
             throw new InvalidEnrollmentDateException("Enrollment date cannot be in the future.");
         
         EnrollmentDate = enrollmentDate;
-
         AddStudent(this);
+    }
+
+    public void BorrowResource(IResource resource)
+    {
+        // Check if already exists and borrow using Bag History association
+        var record = _borrowRecords.FirstOrDefault(record => record.GetResource() == resource);
+        if (record != null)
+        {
+            _borrowRecords.Add(record.BorrowResource(DateTime.Now, DateTime.Now.AddDays(30)));
+        }
+        
+        // Else create new borrow record
+        _borrowRecords.Add(new BorrowRecord(DateTime.Now, DateTime.Now.AddDays(30), null, BorrowRecordStatus.Requested, null, this, resource, null));
+    }
+
+    public void AddBorrowRecord(BorrowRecord borrowRecord)  // Required for Borrow record to itself on duplicating
+    {
+        _borrowRecords.Add(borrowRecord);
     }
 
     public bool isAllowedToBorrow()
