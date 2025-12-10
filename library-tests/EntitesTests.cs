@@ -180,32 +180,28 @@ public class EntitiesTests
     [Test]
     public void IDigitalResource_AddTranslation_WithLanguage_ThrowsNotSupportedExceptionWhenExpected()
     {
-        IDigitalResource book = new Book
-        {
-            ISBN = "978-3-16-148410-0",
-            HasAudio = true,
-            Quantity = 5,
-            Size = 464,
-            Title = "Clean Code",
-            Description = "A Handbook of Agile Software Craftsmanship",
-            Link = "https://example.com/clean-code",
-            CoverType = CoverType.Hard,
-            Translations = []
-        };
+        Book book = new Book(
+            "978-3-16-148410-0",
+            "Clean Code",
+            "A Handbook of Agile Software Craftsmanship",
+            true,
+            464,
+            "https://example.com/clean-code",
+            CoverType.Hard,
+            5
+        );
 
-        IDigitalResource magazine = new OnlineMagazine()
-        {
-            Title = "Harvard Law is Awful",
-            Description = "About Harvard law.",
-            Link = "https://example.com/harvard-law-is-awful",
-            Size = 464,
-            PageLink = "https://newyorkmagazine.com/harvard-law-is-awful",
-            Translations = [],
-            HasAudio = false
-        };
+        OnlineMagazine magazine = new OnlineMagazine(
+            "https://newyorkmagazine.com/harvard-law-is-awful",
+            "Harvard Law is Awful",
+            "About Harvard law.",
+            false,
+            464,
+            "https://example.com/harvard-law-is-awful"
+        );
 
-        Assert.Throws<NotSupportedException>(() => magazine.AddTranslation("german"));
-        Assert.Throws<NotSupportedException>(() => magazine.AddTranslation("french"));
+        Assert.Throws<UnsupportedLanguageException>(() => magazine.AddTranslation("german"));
+        Assert.Throws<UnsupportedLanguageException>(() => magazine.AddTranslation("french"));
         Assert.DoesNotThrow(() => magazine.AddTranslation("english"));
         Assert.DoesNotThrow(() => magazine.AddTranslation("polish"));
         Assert.DoesNotThrow(() => magazine.AddTranslation("ukrainian"));
@@ -556,10 +552,18 @@ public class EntitiesTests
         // Try to add same translation to different book - should create new translation
         book2.AddTranslation("english");
 
-        // Verify each book has its own translation
-        Assert.That(book1.Translations.Count, Is.EqualTo(1));
-        Assert.That(book2.Translations.Count, Is.EqualTo(1));
-        Assert.That(book1.Translations[0], Is.Not.EqualTo(book2.Translations[0]));
+        // Verify each book has its own translation by querying the extent
+        var allTranslations = Translation.GetAllTranslations();
+        var book1Translations = allTranslations
+            .Where(t => t.Owner is Book b && b.ISBN == ((Book)book1).ISBN)
+            .ToList();
+        var book2Translations = allTranslations
+            .Where(t => t.Owner is Book b && b.ISBN == ((Book)book2).ISBN)
+            .ToList();
+
+        Assert.That(book1Translations.Count, Is.EqualTo(1));
+        Assert.That(book2Translations.Count, Is.EqualTo(1));
+        Assert.That(book1Translations[0], Is.Not.EqualTo(book2Translations[0]));
     }
 
     [Test]
@@ -597,10 +601,13 @@ public class EntitiesTests
         IDigitalResource book = new Book("ISBN456", "Test Book", "Description", link: "http://book.com");
         book.AddTranslation("english");
 
-        var translation = book.Translations[0];
+        // Get the translation from extent by filtering by owner ISBN
+        var translation = Translation.GetAllTranslations()
+            .First(t => t.Owner is Book b && b.ISBN == "ISBN456");
 
         Assert.That(translation.Owner, Is.Not.Null);
-        Assert.That(translation.Owner, Is.EqualTo(book));
+        Assert.That(translation.Owner, Is.InstanceOf<Book>());
+        Assert.That(((Book)translation.Owner).ISBN, Is.EqualTo("ISBN456"));
     }
 
     [Test]
@@ -613,7 +620,8 @@ public class EntitiesTests
         var translation = Translation.GetAllTranslations()[0];
 
         Assert.That(translation.Owner, Is.Not.Null);
-        Assert.That(translation.OwnerId, Is.EqualTo("ISBN789"));
+        // Verify owner resolves correctly (OwnerId is private, test through Owner)
+        Assert.That(translation.Owner is Book b && b.ISBN == "ISBN789", Is.True);
         Assert.That(translation.Owner, Is.InstanceOf<Book>());
     }
 
