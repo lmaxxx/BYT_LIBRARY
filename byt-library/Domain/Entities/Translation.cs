@@ -1,3 +1,4 @@
+using System.Text.Json;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
 using byt_library.Domain.Interfaces;
@@ -9,51 +10,29 @@ public class Translation
 {
     public string Link { get; set; }
     public string Language { get; set; }
+    [JsonInclude]
+    private readonly string _ownerId;
+    
+    private static List<Translation> _allTranslations = new();
+    public static readonly object _lockTranslation = new();
+    private static readonly JsonPersistenceService _persistenceService = new("data");
+    
+    private static readonly List<string> _supportedLanguages = ["polish", "english", "ukrainian"];
 
-    // Owner tracking fields
-    private string _ownerId;  // ISBN for Book, PageLink for OnlineMagazine
-    private IDigitalResource? _ownerCache;  // Resolved reference
-
-    // Property for JSON serialization
-    public string? OwnerId
-    {
-        get => _ownerId;
-        set => _ownerId = value;
-    }
-
-    // Owner property with lazy resolution
     [JsonIgnore]
     public IDigitalResource? Owner
     {
         get
         {
-            if (_ownerCache == null && !string.IsNullOrEmpty(_ownerId))
+            if (string.IsNullOrEmpty(_ownerId))
             {
-                // Try Book first
-                _ownerCache = Book.GetBookByIsbn(_ownerId) as IDigitalResource;
-                // Try OnlineMagazine if not found
-                if (_ownerCache == null)
-                    _ownerCache = OnlineMagazine.GetOnlineMagazineByPageLink(_ownerId) as IDigitalResource;
+                return null;
             }
-            return _ownerCache;
-        }
-        private set
-        {
-            _ownerCache = value;
-            _ownerId = value switch
-            {
-                Book b => b.ISBN,
-                OnlineMagazine om => om.PageLink,
-                _ => null
-            };
+            IDigitalResource? owner = (owner = Book.GetBookByIsbn(_ownerId)) == null ? OnlineMagazine.GetOnlineMagazineByPageLink(_ownerId) : owner;
+            return owner;
         }
     }
-
-    private static List<Translation> _allTranslations = new();
-    public static readonly object _lockTranslation = new();
-    private static readonly JsonPersistenceService _persistenceService = new("data");
-    public static readonly List<string> _supportedLanguages = ["polish", "english", "ukrainian"];
-
+    
     static Translation()
     {
         try
@@ -83,18 +62,18 @@ public class Translation
             _allTranslations = new List<Translation>();
         }
     }
-
-    // Make constructor enforce owner
-    public Translation(string link, string language, IDigitalResource owner) { 
+    
+    [JsonConstructor]
+    public Translation(string link, string language, string _ownerId) { 
         if (!_supportedLanguages.Contains(language.ToLower()))
             throw new UnsupportedLanguageException($"Language '{language}' is not supported.");
 
-        if (owner == null)
+        if (String.IsNullOrEmpty(_ownerId))
             throw new TranslationOwnerIsNullException("Translation must have an owner");
 
         Link = link;
         Language = language;
-        Owner = owner;
+        this._ownerId = _ownerId;
         AddTranslation(this);
     }
 
@@ -103,21 +82,13 @@ public class Translation
     {
         foreach (var translation in translations)
         {
-            if (string.IsNullOrEmpty(translation.OwnerId))
+            if (translation.Owner == null)
             {
                 throw new CompositionConstraintViolationException(
                     $"Translation with Link '{translation.Link}' and Language '{translation.Language}' " +
                     "has no owner. Composition constraint violated.");
             }
-
-            // Verify owner exists
-            if (translation.Owner == null)
-            {
-                throw new CompositionConstraintViolationException(
-                    $"Translation with Link '{translation.Link}' and Language '{translation.Language}' " +
-                    $"references non-existent owner '{translation.OwnerId}'. Composition constraint violated.");
-            }
-        }
+        } 
     }
 
     private static void AddTranslation(Translation translation)
@@ -134,7 +105,7 @@ public class Translation
                 throw new LanguageIsEmptyException("Language cannot be empty");
 
             // Validate owner exists (composition constraint)
-            if (translation.Owner == null && !string.IsNullOrEmpty(translation.OwnerId))
+            if (translation.Owner == null && !string.IsNullOrEmpty(translation._ownerId))
                 throw new TranslationOwnerIsNullException("Translation must have a valid owner");
 
             if (_allTranslations.Any(t => t.Link.Equals(translation.Link, StringComparison.OrdinalIgnoreCase) &&
@@ -171,18 +142,11 @@ public class Translation
 
         lock (_lockTranslation)
         {
-            var toRemove = _allTranslations
-                .Where(t => t.OwnerId?.Equals(ownerId, StringComparison.OrdinalIgnoreCase) == true)
-                .ToList();
-
-            foreach (var translation in toRemove)
+            foreach (var translation in _allTranslations
+                         .Where(t => t._ownerId.Equals(ownerId, StringComparison.OrdinalIgnoreCase))
+                         .ToList())
             {
                 _allTranslations.Remove(translation);
-            }
-
-            if (toRemove.Any())
-            {
-                _persistenceService.Save(_allTranslations);
             }
         }
     }

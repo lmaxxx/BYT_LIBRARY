@@ -6,30 +6,8 @@ public interface IDigitalResource : IResource
 {
     public int Size { get; set; }
     public string Link { get; set; }
-    
-    public List<Translation> Translations { get; set; }
-    
-    public void AddTranslation(string language)
-    {
-        if (!Translation._supportedLanguages.Contains(language))
-        {
-            throw new NotSupportedException("Language is not supported");
-        }
 
-        var translation = new Translation($"{Link}/{language}", language, this);
-        Translations.Add(translation);
-    }
+    public void AddTranslation(string language);  // Adds new translations (since by language - there is no way to add already existing translation to a digital resource - no shared translations)
+    public bool RemoveTranslation(string language);  // Returns true if successfully removed the translation
 
-    public void RemoveTranslation(string language)
-    {
-        var translation = Translations.FirstOrDefault(t =>
-            t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
-
-        if (translation != null)
-        {
-            Translation.RemoveTranslation(translation.Link, translation.Language);
-            Translations.Remove(translation);
-        }
-    }
-    
 }
