@@ -175,7 +175,6 @@ public class Student : Person
         if (_subscription == null)
             throw new SubscriptionIsNotAssignedException("Student has no subscription to remove.");
 
-        var oldSub = _subscription;
         _subscription = null;
     }
     

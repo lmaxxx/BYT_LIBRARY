@@ -77,23 +77,6 @@ public class EntitiesTests
     }
 
     [Test]
-    public void Payment_Constructor_WhenNeitherSubscriptionNorBorrowRecordProvided_ThrowsException()
-    {
-        var ex = Assert.Throws<PaymentXorViolationException>(() =>
-        {
-            var payment = new Payment(
-                amount: 50.0,
-                paymentDate: DateTime.Now,
-                paymentMethod: PaymentMethod.Cash,
-                subscription: null,
-                borrowRecord: null
-            );
-        });
-
-        Assert.That(ex.Message, Does.Contain("Payment must be attached to exactly one of Subscription or BorrowRecord"));
-    }
-
-    [Test]
     public void Subscription_CalculateCost_WithPartialMonths_RoundsUpCorrectly()
     {
         var startDate = new DateTime(2025, 1, 1);
@@ -897,36 +880,6 @@ public class EntitiesTests
         }
     }
 
-    /*[Test]
-    public void Translation_SaveAndLoad_PreservesAllProperties()
-    {
-        var testDirectory = Path.Combine(Path.GetTempPath(), "byt_library_test_" + Guid.NewGuid().ToString());
-        var persistenceService = new JsonPersistenceService(testDirectory);
-
-        try
-        {
-            var originalTranslation = new Translation("http://example.com/hp1/pl", "Polish");
-            var translationList = new List<Translation> { originalTranslation };
-
-            persistenceService.Save(translationList);
-            var loadedTranslations = persistenceService.Load<Translation>();
-
-            Assert.That(loadedTranslations, Is.Not.Null);
-            Assert.That(loadedTranslations, Has.Count.EqualTo(1));
-
-            var loadedTranslation = loadedTranslations[0];
-            Assert.That(loadedTranslation.Link, Is.EqualTo("http://example.com/hp1/pl"));
-            Assert.That(loadedTranslation.Language, Is.EqualTo("Polish"));
-        }
-        finally
-        {
-            if (Directory.Exists(testDirectory))
-            {
-                Directory.Delete(testDirectory, true);
-            }
-        }
-    }*/
-
     [Test]
     public void Subscription_SaveAndLoad_PreservesAllProperties()
     {
@@ -1005,5 +958,145 @@ public class EntitiesTests
 
         return new Subscription(start, end, student, new[] { payment });
     }
+    
+    [Test]
+    public void Staff_SetSupervisor_AddsReverseSubordinateRelation()
+    {
+        var supervisor = new Staff("Alice", "Smith", new DateTime(1980, 1, 1), "IT");
+        var worker = new Staff("Bob", "Jones", new DateTime(1990, 1, 1), "IT");
 
+        worker.SetSupervisor(supervisor);
+
+        Assert.That(worker.GetSupervisor(), Is.EqualTo(supervisor));
+        Assert.That(supervisor.GetSubordinates(), Contains.Item(worker));
+    }
+
+    [Test]
+    public void Staff_AddSubordinate_SetsSupervisorOnSubordinate()
+    {
+        var supervisor = new Staff("Alice", "Smith", new DateTime(1980, 1, 1), "IT");
+        var worker = new Staff("Bob", "Jones", new DateTime(1990, 1, 1), "IT");
+
+        supervisor.AddSubordinate(worker);
+
+        Assert.That(worker.GetSupervisor(), Is.EqualTo(supervisor));
+        Assert.That(supervisor.GetSubordinates(), Contains.Item(worker));
+    }
+
+    [Test]
+    public void Staff_ChangeSupervisor_UpdatesBothOldAndNewRelations()
+    {
+        var oldSup = new Staff("Old", "Sup", new DateTime(1980, 1, 1), "HR");
+        var newSup = new Staff("New", "Sup", new DateTime(1985, 1, 1), "HR");
+        var worker = new Staff("Worker", "Guy", new DateTime(1990, 1, 1), "HR");
+
+        worker.SetSupervisor(oldSup);
+        worker.ChangeSupervisor(newSup);
+
+        Assert.That(worker.GetSupervisor(), Is.EqualTo(newSup));
+        Assert.That(oldSup.GetSubordinates(), Does.Not.Contain(worker));
+        Assert.That(newSup.GetSubordinates(), Contains.Item(worker));
+    }
+    
+    [Test]
+    public void Student_AddSubscription_SetsReverseReference()
+    {
+        var student = new Student("Bob", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
+        var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { payment });
+
+        Assert.That(student.GetSubscription(), Is.EqualTo(subscription));
+        Assert.That(subscription.GetStudent(), Is.EqualTo(student));
+    }
+    
+    [Test]
+    public void Student_AddSubscription_WhenAlreadyHasOne_ThrowsException()
+    {
+        var student = new Student("Bob", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+
+        var sub1 = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student,
+            new[] { new Payment(20, DateTime.Now, PaymentMethod.Cash) });
+
+        Assert.Throws<SubscriptionAlreadyBelongsException>(() => new Subscription(DateTime.Now, DateTime.Now.AddMonths(2), student,
+            new[] { new Payment(20, DateTime.Now, PaymentMethod.Cash) }));
+    }
+
+    [Test]
+    public void Subscription_AddPayment_SetsReverseReference()
+    {
+        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+
+        var p1 = new Payment(10, DateTime.Now, PaymentMethod.Cash);
+        var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { p1 });
+
+        var p2 = new Payment(5, DateTime.Now, PaymentMethod.Cash);
+        subscription.AddPayment(p2);
+
+        Assert.That(subscription.GetPayments(), Contains.Item(p2));
+        Assert.That(p2.GetSubscription(), Is.EqualTo(subscription));
+    }
+    
+    [Test]
+    public void Subscription_RemovePayment_ClearsReverseReference()
+    {
+        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
+        var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { payment });
+
+        subscription.RemovePayment(payment);
+
+        Assert.That(subscription.GetPayments(), Does.Not.Contain(payment));
+        Assert.That(payment.GetSubscription(), Is.Null);
+    }
+
+    [Test]
+    public void Subscription_AddPayment_WhenPaymentBelongsToBorrowRecord_ThrowsException()
+    {
+        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var validPayment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
+        var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { validPayment });
+
+        var invalidPayment = new Payment(7, DateTime.Now, PaymentMethod.Cash, borrowRecord: new BorrowRecord());
+
+        Assert.Throws<PaymentXorViolationException>(() => subscription.AddPayment(invalidPayment));
+    }
+    
+    [Test]
+    public void Payment_Constructor_XorViolation_ThrowsException()
+    {
+        var student = new Student("X", "Y", new DateTime(1990,1,1), DateTime.Now.AddDays(-5));
+        var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student,
+            new[] { new Payment(10, DateTime.Now, PaymentMethod.Cash) });
+
+        var borrowRecord = new BorrowRecord();
+
+        Assert.Throws<PaymentXorViolationException>(() => 
+            new Payment(20, DateTime.Now, PaymentMethod.Cash, subscription, borrowRecord)
+        );
+    }
+    
+    [Test]
+    public void Payment_AddSubscription_WhenAttachedToBorrowRecord_ThrowsException()
+    {
+        var borrowRecord = new BorrowRecord();
+        var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash, borrowRecord: borrowRecord);
+
+        var student = new Student("Bob", "Test", new DateTime(1990,1,1), DateTime.Now.AddDays(-2));
+        var sub = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student,
+            new[] { new Payment(5, DateTime.Now, PaymentMethod.Cash) });
+
+        Assert.Throws<PaymentXorViolationException>(() => payment.AddSubscription(sub));
+    }
+
+    [Test]
+    public void Payment_AssignedThroughSubscriptionConstructor_SetsReverseRelation()
+    {
+        var student = new Student("Jim", "Guy", new DateTime(1990,1,1), DateTime.Now.AddDays(-1));
+        var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
+
+        var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { payment });
+
+        Assert.That(payment.GetSubscription(), Is.EqualTo(subscription));
+        Assert.That(payment.GetBorrowRecord(), Is.Null);
+    }
 }
