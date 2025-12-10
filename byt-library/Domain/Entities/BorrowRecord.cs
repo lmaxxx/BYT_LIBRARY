@@ -1,6 +1,7 @@
 using byt_library.Domain.Enums;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
+using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
@@ -12,20 +13,30 @@ public class BorrowRecord
     public BorrowRecordStatus Status { get; set; }
     public string BorrowCode { get; set; }
     
+    private readonly Student _student;
+
+    private readonly IResource _resource;
+    
     private Payment? _payment;
     public Payment? GetPayment() => _payment;
 
-    public BorrowRecord()
+    public BorrowRecord(DateTime borrowDate, DateTime dueDate, DateTime? returnDate, BorrowRecordStatus status, string? borrowCode, Student _student, IResource _resource, Payment? _payment)
     {
-        BorrowDate = DateTime.Now;
-        DueDate = BorrowDate.AddDays(30);
-        Status = BorrowRecordStatus.Ongoing;
-        ReturnDate = null;
-        GenerateBorrowCode();
+        BorrowDate = borrowDate;
+        DueDate = dueDate;
+        Status = status;
+        ReturnDate = returnDate;
+        if (borrowCode != null)
+            BorrowCode = borrowCode;
+        else
+            GenerateBorrowCode();
+        this._student = _student;
+        this._resource = _resource;
+        this._payment = _payment;
         AddBorrowRecord(this);
     }
 
-    public BorrowRecord(int borrowDays = 30)
+    public BorrowRecord(int borrowDays, Student _student, IResource _resource)
     {
         if (borrowDays <= 0)
             throw new InvalidBorrowDaysException();
@@ -34,6 +45,8 @@ public class BorrowRecord
         DueDate = BorrowDate.AddDays(borrowDays);
         Status = BorrowRecordStatus.Ongoing;
         ReturnDate = null;
+        this._student = _student;
+        this._resource = _resource;
         GenerateBorrowCode();
         AddBorrowRecord(this);
     }
@@ -48,6 +61,23 @@ public class BorrowRecord
             double lateDays = (ReturnDate.Value - DueDate).Days;
             return lateDays;
         }
+    }
+
+    public BorrowRecord BorrowResource(DateTime borrowDate, DateTime dueDate)
+    {
+        var newBorrowRecord = new BorrowRecord(borrowDate, dueDate, ReturnDate, Status, null, _student, _resource, _payment);  // Ensure the student has the new borrow record
+        _student.AddBorrowRecord(newBorrowRecord);
+        return newBorrowRecord;
+    }
+    
+    public IResource GetResource()
+    {
+        return _resource;
+    }
+    
+    public Student GetStudent()
+    {
+        return _student;
     }
 
     private static List<BorrowRecord> _allBorrowRecords = new();

@@ -45,7 +45,7 @@ public class EntitiesTests
     [Test]
     public void BorrowRecord_CalculateFineAmount_WhenOverdue_ReturnsCorrectFine()
     {
-        var borrowRecord = new BorrowRecord(borrowDays: 30);
+        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
 
         borrowRecord.ReturnDate = borrowRecord.DueDate.AddDays(5);
 
@@ -60,7 +60,7 @@ public class EntitiesTests
     public void Payment_Constructor_WhenBothSubscriptionAndBorrowRecordProvided_ThrowsException()
     {
         var subscription = MakeSub(DateTime.Now, DateTime.Now.AddMonths(1));
-        var borrowRecord = new BorrowRecord();
+        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
 
         var ex = Assert.Throws<PaymentXorViolationException>(() =>
         {
@@ -135,7 +135,7 @@ public class EntitiesTests
     [Test]
     public void BorrowRecord_ReturnOnTime_FineAmountIsZero()
     {
-        var borrowRecord = new BorrowRecord(borrowDays: 30);
+        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
 
         borrowRecord.ReturnDate = borrowRecord.DueDate;
         var fineAmount = borrowRecord.FineAmount;
@@ -230,19 +230,21 @@ public class EntitiesTests
             var originalDueDate = originalBorrowDate.AddDays(30);
             var originalReturnDate = originalDueDate.AddDays(5);
 
-            var borrowRecord = new BorrowRecord
-            {
-                BorrowDate = originalBorrowDate,
-                DueDate = originalDueDate,
-                ReturnDate = originalReturnDate,
-                Status = BorrowRecordStatus.Returned,
-                BorrowCode = "BR-TEST123"
-            };
+            var borrowRecord = new BorrowRecord(
+                originalBorrowDate,
+                originalDueDate,
+                originalReturnDate,
+                BorrowRecordStatus.Returned, 
+                "BR-TEST123",
+                new Student("Jakub", "Koko", DateTime.Now, DateTime.Now),
+                new Newspaper("Nothing", "Nothing", "Nothing"),
+                null
+                );
 
             var borrowRecordList = new List<BorrowRecord> { borrowRecord };
 
             persistenceService.Save(borrowRecordList);
-
+            BorrowRecord.ClearBorrowRecordExtent();
             var loadedBorrowRecords = persistenceService.Load<BorrowRecord>();
 
             Assert.That(loadedBorrowRecords, Is.Not.Null, "Loaded records should not be null");
@@ -335,20 +337,20 @@ public class EntitiesTests
     [Test]
     public void BorrowRecord_Constructor_WithInvalidBorrowDays_ThrowsInvalidBorrowDaysException()
     {
-        Assert.Throws<InvalidBorrowDaysException>(() => new BorrowRecord(0));
+        Assert.Throws<InvalidBorrowDaysException>(() => new BorrowRecord(0, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing")));
     }
 
     [Test]
     public void BorrowRecord_CancelBorrowRecordRequest_WhenActive_ThrowsBorrowRecordIsActiveException()
     {
-        var borrowRecord = new BorrowRecord();
+        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
         Assert.Throws<BorrowRecordIsActiveException>(() => borrowRecord.CancelBorrowRecordRequest());
     }
 
     [Test]
     public void BorrowRecord_ReturnBorrowRecord_WhenInactive_ThrowsBorrowRecordIsInactiveException()
     {
-        var borrowRecord = new BorrowRecord();
+        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
         borrowRecord.Status = BorrowRecordStatus.Returned;
         Assert.Throws<BorrowRecordIsInactiveException>(() => borrowRecord.ReturnBorrowRecord());
     }
@@ -637,6 +639,7 @@ public class EntitiesTests
             var personList = new List<Person> { originalPerson };
 
             persistenceService.Save(personList);
+            Person.ClearExtent();
             var loadedPeople = persistenceService.Load<Person>();
 
             Assert.That(loadedPeople, Is.Not.Null);
@@ -669,6 +672,8 @@ public class EntitiesTests
             var authorList = new List<Author> { originalAuthor };
 
             persistenceService.Save(authorList);
+            Author.ClearAuthorExtent();
+            Person.ClearExtent();
             var loadedAuthors = persistenceService.Load<Author>();
 
             Assert.That(loadedAuthors, Is.Not.Null);
@@ -741,6 +746,8 @@ public class EntitiesTests
             var staffList = new List<Staff> { originalStaff, supervisor };
 
             persistenceService.Save(staffList);
+            Staff.ClearStaffExtent();
+            Person.ClearExtent();
             var loadedStaffList = persistenceService.Load<Staff>();
 
             Assert.That(loadedStaffList, Is.Not.Null);
@@ -772,17 +779,20 @@ public class EntitiesTests
 
         try
         {
-            var originalBook = new Book("978-0439708180", "Harry Potter and the Sorcerer's Stone", "First book in the series")
-            {
-                HasAudio = true,
-                Quantity = 10,
-                Size = 500,
-                Link = "http://example.com/hp1",
-                CoverType = CoverType.Hard
-            };
+            var originalBook = new Book(
+                "978-0439708180",
+                "Harry Potter and the Sorcerer's Stone",
+                "First book in the series",
+                true,
+                500,
+                "http://example.com/hp1",
+                CoverType.Hard,
+                10
+            );
             var bookList = new List<Book> { originalBook };
 
             persistenceService.Save(bookList);
+            Book.ClearBookExtent();
             var loadedBooks = persistenceService.Load<Book>();
 
             Assert.That(loadedBooks, Is.Not.Null);
@@ -819,6 +829,7 @@ public class EntitiesTests
             var catalogList = new List<Catalog> { originalCatalog };
 
             persistenceService.Save(catalogList);
+            Catalog.ClearCatalogExtent();
             var loadedCatalogs = persistenceService.Load<Catalog>();
 
             Assert.That(loadedCatalogs, Is.Not.Null);
@@ -876,21 +887,24 @@ public class EntitiesTests
 
         try
         {
-            var originalMagazine = new OnlineMagazine("http://witchweekly.com/latest", "Witch Weekly", "Latest issue")
-            {
-                Size = 20,
-                HasAudio = false,
-            };
+            var originalMagazine = new OnlineMagazine(
+                "https://witchweekly.com/latest",
+                "Witch Weekly",
+                "Latest issue",
+                false,
+                20
+            );
             var magazineList = new List<OnlineMagazine> { originalMagazine };
 
             persistenceService.Save(magazineList);
+            OnlineMagazine.ClearOnlineMagazineExtent();
             var loadedMagazines = persistenceService.Load<OnlineMagazine>();
 
             Assert.That(loadedMagazines, Is.Not.Null);
             Assert.That(loadedMagazines, Has.Count.EqualTo(1));
 
             var loadedMagazine = loadedMagazines[0];
-            Assert.That(loadedMagazine.PageLink, Is.EqualTo("http://witchweekly.com/latest"));
+            Assert.That(loadedMagazine.PageLink, Is.EqualTo("https://witchweekly.com/latest"));
             Assert.That(loadedMagazine.Title, Is.EqualTo("Witch Weekly"));
             Assert.That(loadedMagazine.Description, Is.EqualTo("Latest issue"));
             Assert.That(loadedMagazine.Size, Is.EqualTo(20));
@@ -1009,9 +1023,25 @@ public class EntitiesTests
             10,
             DateTime.Now,
             PaymentMethod.Cash,
-            borrowRecord: new BorrowRecord()); // safe for XOR
+            borrowRecord: new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"))); // safe for XOR
 
         return new Subscription(start, end, student, new[] { payment });
+    }
+
+    [Test]
+    public void BorrowRecord_ReborrowResourceCorrectlyWorks()
+    {
+        // Allows duplicates
+        var student = new Student("Auto", "Gen", new DateTime(1990, 1, 1), DateTime.Now);
+        var newspaper = new Newspaper("Nothing", "nNothing", "Nothing");
+        student.BorrowResource(newspaper);
+        Assert.DoesNotThrow(() => student.BorrowResource(newspaper), "Student should allow to borrow the same resource.");
+        
+        // Maintains reverse association
+        foreach (var record in BorrowRecord.GetAllBorrowRecords())
+        {
+            Assert.That(record.GetStudent() == student, "The only created records should have the association with the student.");
+        }
     }
 
 }
