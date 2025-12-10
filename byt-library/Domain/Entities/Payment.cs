@@ -51,8 +51,7 @@ public class Payment
         Subscription? subscription = null,
         BorrowRecord? borrowRecord = null)
     {
-        if ((subscription == null && borrowRecord == null) ||
-            (subscription != null && borrowRecord != null))
+        if (subscription != null && borrowRecord != null)
             throw new PaymentXorViolationException(
                 "Payment must be attached to exactly one of Subscription or BorrowRecord.");
 
