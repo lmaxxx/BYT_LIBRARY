@@ -1208,4 +1208,53 @@ public class EntitiesTests
         Assert.That(payment.GetBorrowRecord(), Is.Null);
     }
 
+    [Test]
+    public void
+        Attempt_To_Remove_Not_Present_Resource_From_The_Catalog_Must_Throw_ResourceIsAlreadyPresentInTheCatalogException()
+    {
+        var catalog = new Catalog("Fiction");
+        
+        catalog.AddResource(new Book("978-0765387561",
+            "Harry Potter",
+            "A special collector's edition with author sign",
+            true,
+            450,
+            "https://audible.com/addie-larue",
+            CoverType.Hard,
+            10,
+            null
+        ));
+        
+        Assert.Throws<ResourceIsAlreadyPresentInTheCatalogException>(() => 
+            catalog.AddResource(new Book(
+            "978-1250785596",
+            "Harry Potter",
+            "Travel-size pocket edition for comfortable reading",
+            false,
+            300,
+            "https://store.localbooks.com/pocket-addie",
+            CoverType.Soft,
+            50,
+            null
+        )));
+    }
+
+    [Test]
+    public void
+        Attemt_To_Add_Existing_Resource_To_The_Catalog_Must_Throw_ResourceIsNotPresentInTheCatalogException()
+    {
+        var catalog = new Catalog("Fiction");
+
+        Assert.Throws<ResourceIsNotPresentInTheCatalogException>(() => catalog.RemoveResource(
+            new Book("978-0765387561",
+                "Harry Potter",
+                "A special collector's edition with author sign",
+                true,
+                450,
+                "https://audible.com/addie-larue",
+                CoverType.Hard,
+                10,
+                null
+            )));
+    }
 }

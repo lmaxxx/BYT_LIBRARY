@@ -1,3 +1,4 @@
+using byt_library.Domain.Exceptions;
 using byt_library.Domain.Interfaces;
 using byt_library.Domain.Services;
 
@@ -48,7 +49,26 @@ public class Catalog
 
     public void AddResource(IResource resource)
     {
-        resources.Add(resource.Title, resource);
+        if (!resources.ContainsKey(resource.Title))
+        {
+            resources.Add(resource.Title, resource);   
+        }
+        else
+        {
+            throw new ResourceIsAlreadyPresentInTheCatalogException($"Resource with title {resource.Title} already exists in catalog");
+        }
+    }
+    
+    public void RemoveResource(IResource resource)
+    {
+        if (resources.ContainsKey(resource.Title))
+        {
+            resources.Remove(resource.Title);
+        }
+        else
+        {
+            throw new ResourceIsNotPresentInTheCatalogException("There is no resource with the title: " +  resource.Title);
+        }
     }
 
     private static void AddCatalog(Catalog catalog)
