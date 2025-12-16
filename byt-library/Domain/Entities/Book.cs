@@ -67,6 +67,7 @@ public class Book : PrintedResource, IDigitalResource
         CoverType = coverType;
         Quantity = quantity;
         this._translations = _translations ?? new HashSet<Translation>();
+        resource.AssignDigitalResource(this);  // As to PrintedResource it is assigned at constructor BUT to Digital one not due to an interface trick for multi-inheritance
         AddBook(this);
     }
 

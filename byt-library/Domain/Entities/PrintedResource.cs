@@ -4,11 +4,20 @@ using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
-public class PrintedResource(Resource resource, CoverType coverType, int quantity) : IPrintedResource
+public class PrintedResource : IPrintedResource
 {
     [JsonInclude]
-    private readonly Resource _resource = resource;
+    private readonly Resource _resource;
     
-    public CoverType CoverType { get; set; } = coverType;
-    public int Quantity { get; set; } = quantity;
+    public CoverType CoverType { get; set; }
+    public int Quantity { get; set; }
+
+    [JsonConstructor]
+    public PrintedResource(Resource resource, CoverType coverType, int quantity)
+    {
+        Quantity = quantity;
+        CoverType = coverType;
+        _resource = resource;
+        _resource.AssignPrintedResource(this);
+    }
 }

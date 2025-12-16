@@ -63,7 +63,7 @@ public class Resource
         _borrowRecords.Add(borrowRecord);
     }
 
-    public void AssignBook(IDigitalResource digitalResource)
+    public void AssignDigitalResource(IDigitalResource digitalResource)
     {
         if (_digitalResource == null) _digitalResource = digitalResource;
         else

@@ -4,15 +4,24 @@ using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
-public class DigitalResource(Resource resource, int size, string link) : IDigitalResource
+public class DigitalResource : IDigitalResource
 {
-    public int Size { get; set; } = size;
-    public string Link { get; set; } = link;
+    public int Size { get; set; }
+    public string Link { get; set; }
     
     [JsonInclude]
     private readonly HashSet<Translation> _translations = new();
 
-    [JsonInclude] private readonly Resource _resource = resource;
+    [JsonInclude] private readonly Resource _resource;
+
+    [JsonConstructor]
+    public DigitalResource(Resource resource, int size, string link)
+    {
+        Size = size;
+        Link = link;
+        _resource = resource;
+        _resource.AssignDigitalResource(this);
+    }
 
     public void AddTranslation(string language)
     {
