@@ -1,11 +1,14 @@
 using byt_library.Domain.Exceptions;
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
+using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
-public class Staff : Person
+public class Staff : IStaff
 {
+    private readonly Person _person;
+    private Person GetPerson() => _person;
     public string Department { get; set; }
     
     private Staff? _supervisor;                        
@@ -35,15 +38,22 @@ public class Staff : Person
             _allStaff = new List<Staff>();
         }
     }
-
-    public Staff(string firstName, string lastName, DateTime dateOfBirth, string department, string? email = null)
-        : base(firstName, lastName, dateOfBirth, email)
+    
+    public Staff(Person person, string department)
     {
+        if (person == null)
+            throw new PersonIsNullException(nameof(person), "Person is null");
+
         if (string.IsNullOrWhiteSpace(department))
             throw new DepartmentIsEmptyException();
-        
+
+        if (person.GetStaff() != null)
+            throw new StaffAlreadyExistsException("Person already has a Staff role.");
+
+        _person = person;
         Department = department;
 
+        _person.AssignStaff(this);
         AddStaff(this);
     }
 
@@ -52,23 +62,20 @@ public class Staff : Person
         if (staff == null)
             throw new StaffIsNullException(nameof(staff), "Cannot add null staff to extent");
 
+        var person = staff.GetPerson();
+
         lock (_lockStaff)
         {
-            if (_allStaff.Any(s => s.FirstName.Equals(staff.FirstName, StringComparison.OrdinalIgnoreCase) &&
-                                   s.LastName.Equals(staff.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new StaffAlreadyExistsException($"Staff with name {staff.FirstName} {staff.LastName} already exists in Staff extent");
+            if (_allStaff.Any(s =>
+                    s.GetPerson().FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                    s.GetPerson().LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new StaffAlreadyExistsException(
+                    $"Staff with name {person.FirstName} {person.LastName} already exists in Staff extent");
+            }
 
             _allStaff.Add(staff);
-
-            try
-            {
-                _persistenceService.Save(_allStaff);
-            }
-            catch (Exception ex)
-            {
-                _allStaff.Remove(staff);
-                throw new InvalidOperationException("Failed to persist Staff to file", ex);
-            }
+            _persistenceService.Save(_allStaff);
         }
     }
 
@@ -77,12 +84,13 @@ public class Staff : Person
         lock (_lockStaff)
         {
             var staff = _allStaff.FirstOrDefault(s =>
-                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
-                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+                s.GetPerson().FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+
             if (staff != null)
             {
                 _allStaff.Remove(staff);
-                RemovePerson(firstName, lastName);
+                staff.GetPerson().RemoveStaff(); // remove role only
                 return true;
             }
             return false;
@@ -94,8 +102,8 @@ public class Staff : Person
         lock (_lockStaff)
         {
             return _allStaff.FirstOrDefault(s =>
-                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
-                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+                s.GetPerson().FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -121,6 +129,11 @@ public class Staff : Person
     {
         lock (_lockStaff)
         {
+            foreach (var staff in _allStaff)
+            {
+                staff.GetPerson().RemoveStaff();
+            }
+
             _allStaff.Clear();
             _persistenceService.Save(_allStaff);
         }

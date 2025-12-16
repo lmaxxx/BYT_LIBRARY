@@ -6,8 +6,10 @@ using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
-public class Student : Person
+public class Student : IStudent
 {
+    private readonly Person _person;
+    private Person GetPerson() => _person;
     public DateTime EnrollmentDate { get; set; }
     
     private Subscription? _subscription;
@@ -38,14 +40,21 @@ public class Student : Person
             _allStudents = new List<Student>();
         }
     }
-
-    public Student(string firstName, string lastName, DateTime dateOfBirth, DateTime enrollmentDate, string? email = null)
-        : base(firstName, lastName, dateOfBirth, email)
+    
+    public Student(Person person, DateTime enrollmentDate)
     {
+        if (person == null)
+            throw new PersonIsNullException(nameof(person), "Person is null");
+            
+        if (person.GetStaff() != null)
+            throw new StudentAlreadyExistsException("Person already has a Student role.");
+
         if (enrollmentDate > DateTime.Now)
             throw new InvalidEnrollmentDateException("Enrollment date cannot be in the future.");
-        
+
         EnrollmentDate = enrollmentDate;
+        _person = person;
+        _person.AssignStudent(this);
         AddStudent(this);
     }
 
@@ -67,7 +76,7 @@ public class Student : Person
         _borrowRecords.Add(borrowRecord);
     }
 
-    public bool isAllowedToBorrow()
+    public bool IsAllowedToBorrow()
     {
         return false;
     }
@@ -77,11 +86,17 @@ public class Student : Person
         if (student == null)
             throw new StudentIsNullException(nameof(student), "Cannot add null student to extent");
 
+        var person = student.GetPerson();
+
         lock (_lockStudent)
         {
-            if (_allStudents.Any(s => s.FirstName.Equals(student.FirstName, StringComparison.OrdinalIgnoreCase) &&
-                                      s.LastName.Equals(student.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new StudentAlreadyExistsException($"Student with name {student.FirstName} {student.LastName} already exists in Student extent");
+            if (_allStudents.Any(s =>
+                    s.GetPerson().FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                    s.GetPerson().LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new StudentAlreadyExistsException(
+                    $"Student with name {person.FirstName} {person.LastName} already exists in Student extent");
+            }
 
             _allStudents.Add(student);
 
@@ -102,14 +117,16 @@ public class Student : Person
         lock (_lockStudent)
         {
             var student = _allStudents.FirstOrDefault(s =>
-                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
-                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+                s.GetPerson().FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+
             if (student != null)
             {
                 _allStudents.Remove(student);
-                RemovePerson(firstName, lastName);
+                student.GetPerson().RemoveStudent(); // remove role from person
                 return true;
             }
+
             return false;
         }
     }
@@ -119,8 +136,8 @@ public class Student : Person
         lock (_lockStudent)
         {
             return _allStudents.FirstOrDefault(s =>
-                s.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
-                s.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+                s.GetPerson().FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                s.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
     
@@ -137,18 +154,18 @@ public class Student : Person
         lock (_lockStudent)
         {
             return _allStudents.Where(s => s.EnrollmentDate > date)
-                              .ToList()
-                              .AsReadOnly();
+                .ToList()
+                .AsReadOnly();
         }
     }
-    
+
     public static IReadOnlyList<Student> GetStudentsByEnrollmentYear(int year)
     {
         lock (_lockStudent)
         {
             return _allStudents.Where(s => s.EnrollmentDate.Year == year)
-                              .ToList()
-                              .AsReadOnly();
+                .ToList()
+                .AsReadOnly();
         }
     }
 
@@ -156,6 +173,11 @@ public class Student : Person
     {
         lock (_lockStudent)
         {
+            foreach (var student in _allStudents)
+            {
+                student.GetPerson().RemoveStudent();
+            }
+
             _allStudents.Clear();
             _persistenceService.Save(_allStudents);
         }
