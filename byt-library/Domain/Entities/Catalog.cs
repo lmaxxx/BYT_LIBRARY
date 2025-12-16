@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json.Serialization;
 using byt_library.Domain.Exceptions;
 using byt_library.Domain.Interfaces;
 using byt_library.Domain.Services;
@@ -7,7 +9,9 @@ namespace byt_library.Domain.Entities;
 public class Catalog
 {
     public string Name { get; set; }
-    public Dictionary<string, IResource> resources { get; }
+    
+    [JsonInclude]
+    private Dictionary<string, Resource> _resources { get; }
 
     private static List<Catalog> _allCatalogs = new();
     private static readonly object _lockCatalog = new();
@@ -36,22 +40,23 @@ public class Catalog
 
     public Catalog()
     {
-        resources = new Dictionary<string, IResource>();
+        _resources = new Dictionary<string, Resource>();
         AddCatalog(this);
     }
 
     public Catalog(string name)
     {
         Name = name;
-        resources = new Dictionary<string, IResource>();
+        _resources = new Dictionary<string, Resource>();
         AddCatalog(this);
     }
 
-    public void AddResource(IResource resource)
+    public void AddResource(Resource resource)
     {
-        if (!resources.ContainsKey(resource.Title))
+        if (!_resources.ContainsKey(resource.Title))
         {
-            resources.Add(resource.Title, resource);   
+            _resources.Add(resource.Title, resource);
+            resource.AddCatalog(this);
         }
         else
         {
@@ -59,11 +64,15 @@ public class Catalog
         }
     }
     
-    public void RemoveResource(IResource resource)
+    public void RemoveResource(Resource resource)
     {
-        if (resources.ContainsKey(resource.Title))
+        if (_resources.ContainsKey(resource.Title))
         {
-            resources.Remove(resource.Title);
+            _resources.Remove(resource.Title);
+            if (resource.RemoveCatalog(this))
+            {
+                throw new CatalogNotFoundInResourceException("Resource has been removed from the catalog");
+            }
         }
         else
         {

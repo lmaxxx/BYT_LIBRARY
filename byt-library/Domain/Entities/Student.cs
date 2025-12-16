@@ -49,7 +49,7 @@ public class Student : Person
         AddStudent(this);
     }
 
-    public void BorrowResource(IResource resource)
+    public void BorrowResource(Resource resource)
     {
         // Check if already exists and borrow using Bag History association
         var record = _borrowRecords.FirstOrDefault(record => record.GetResource() == resource);

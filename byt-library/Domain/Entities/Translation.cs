@@ -10,28 +10,17 @@ public class Translation
 {
     public string Link { get; set; }
     public string Language { get; set; }
+    
     [JsonInclude]
-    private readonly string _ownerId;
+    private readonly IDigitalResource _owner;
     
     private static List<Translation> _allTranslations = new();
     public static readonly object _lockTranslation = new();
     private static readonly JsonPersistenceService _persistenceService = new("data");
     
     private static readonly List<string> _supportedLanguages = ["polish", "english", "ukrainian"];
-
-    [JsonIgnore]
-    public IDigitalResource? Owner
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(_ownerId))
-            {
-                return null;
-            }
-            IDigitalResource? owner = (owner = Book.GetBookByIsbn(_ownerId)) == null ? OnlineMagazine.GetOnlineMagazineByPageLink(_ownerId) : owner;
-            return owner;
-        }
-    }
+    
+    public IDigitalResource GetOwner() => _owner;
     
     static Translation()
     {
@@ -64,16 +53,16 @@ public class Translation
     }
     
     [JsonConstructor]
-    public Translation(string link, string language, string _ownerId) { 
+    public Translation(string link, string language, IDigitalResource _owner) { 
         if (!_supportedLanguages.Contains(language.ToLower()))
             throw new UnsupportedLanguageException($"Language '{language}' is not supported.");
 
-        if (String.IsNullOrEmpty(_ownerId))
+        if (_owner == null)
             throw new TranslationOwnerIsNullException("Translation must have an owner");
 
         Link = link;
         Language = language;
-        this._ownerId = _ownerId;
+        this._owner = _owner;
         AddTranslation(this);
     }
 
@@ -82,7 +71,7 @@ public class Translation
     {
         foreach (var translation in translations)
         {
-            if (translation.Owner == null)
+            if (translation._owner == null)
             {
                 throw new CompositionConstraintViolationException(
                     $"Translation with Link '{translation.Link}' and Language '{translation.Language}' " +
@@ -105,7 +94,7 @@ public class Translation
                 throw new LanguageIsEmptyException("Language cannot be empty");
 
             // Validate owner exists (composition constraint)
-            if (translation.Owner == null && !string.IsNullOrEmpty(translation._ownerId))
+            if (translation._owner == null)
                 throw new TranslationOwnerIsNullException("Translation must have a valid owner");
 
             if (_allTranslations.Any(t => t.Link.Equals(translation.Link, StringComparison.OrdinalIgnoreCase) &&
@@ -131,19 +120,10 @@ public class Translation
     {
         if (owner == null) return;
 
-        string? ownerId = owner switch
-        {
-            Book b => b.ISBN,
-            OnlineMagazine om => om.PageLink,
-            _ => null
-        };
-
-        if (string.IsNullOrEmpty(ownerId)) return;
-
         lock (_lockTranslation)
         {
             foreach (var translation in _allTranslations
-                         .Where(t => t._ownerId.Equals(ownerId, StringComparison.OrdinalIgnoreCase))
+                         .Where(t => t._owner == owner)
                          .ToList())
             {
                 _allTranslations.Remove(translation);

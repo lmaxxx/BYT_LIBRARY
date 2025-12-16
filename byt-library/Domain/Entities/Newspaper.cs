@@ -5,7 +5,7 @@ using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
-public class Newspaper : IPrintedResource
+public class Newspaper : PrintedResource
 {
     public string Publisher { get; set; }
     public string Title { get; set; }
@@ -38,10 +38,8 @@ public class Newspaper : IPrintedResource
         }
     }
 
-    public Newspaper() { }
-
-    public Newspaper(string publisher, string title, string description,
-                     CoverType coverType = CoverType.Soft, int quantity = 1)
+    public Newspaper(Resource resource, string publisher, string title, string description,
+                     CoverType coverType = CoverType.Soft, int quantity = 1) : base(resource, coverType, quantity)
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new DescriptionIsEmptyException();
@@ -52,7 +50,6 @@ public class Newspaper : IPrintedResource
         Publisher = publisher;
         Title = title;
         Description = description;
-        CoverType = coverType;
         Quantity = quantity;
         AddNewspaper(this);
     }
