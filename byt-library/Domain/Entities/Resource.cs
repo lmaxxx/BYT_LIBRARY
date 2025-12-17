@@ -53,7 +53,7 @@ public class Resource
     public Resource(
         string title,
         string description,
-        IEnumerable<Author> authors)
+        ICollection<Author> authors)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new BookISBNIsEmptyException("Resource title cannot be empty");
@@ -144,27 +144,25 @@ public class Resource
     {
         if (resource == null)
             throw new BookIsNullException(nameof(resource), "Cannot add null book to extent");
+        
+        if (string.IsNullOrWhiteSpace(resource.Title))
+            throw new BookISBNIsEmptyException("Book ISBN cannot be empty");
 
-        lock (_lockResource)
+        if (_allResources.Any(b => b.Title.Equals(resource.Title, StringComparison.OrdinalIgnoreCase)))
+            throw new BookAlreadyExistsException($"Book with ISBN {resource.Title} already exists in extent");
+
+        _allResources.Add(resource);
+
+        try
         {
-            if (string.IsNullOrWhiteSpace(resource.Title))
-                throw new BookISBNIsEmptyException("Book ISBN cannot be empty");
-
-            if (_allResources.Any(b => b.Title.Equals(resource.Title, StringComparison.OrdinalIgnoreCase)))
-                throw new BookAlreadyExistsException($"Book with ISBN {resource.Title} already exists in extent");
-
-            _allResources.Add(resource);
-
-            try
-            {
-                _persistenceService.Save(_allResources);
-            }
-            catch (Exception ex)
-            {
-                _allResources.Remove(resource);
-                throw new InvalidOperationException("Failed to persist Book to file", ex);
-            }
+            _persistenceService.Save(_allResources);
         }
+        catch (Exception ex)
+        {
+            _allResources.Remove(resource);
+            throw new InvalidOperationException("Failed to persist Book to file", ex);
+        }
+        
     }
 
     public static bool RemoveResource(string title)
