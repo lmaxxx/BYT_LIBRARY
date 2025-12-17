@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices.JavaScript;
 using byt_library.Domain.Entities;
 using byt_library.Domain.Enums;
 using byt_library.Domain.Exceptions;
@@ -42,10 +43,25 @@ public class EntitiesTests
         Translation.ClearTranslationExtent();
     }
 
+    public Resource CreateResource()
+    {
+        var authors = new List<Author>();
+        for (int i = 0; i < 2; i++)
+        {
+            var person = new Person(i.ToString(), i.ToString(), DateTime.Now);
+            authors.Add(new Author(person));
+        }
+
+        return new Resource("Title", "Description", authors);
+    }
+
     [Test]
     public void BorrowRecord_CalculateFineAmount_WhenOverdue_ReturnsCorrectFine()
     {
-        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
+        var person = new Person("Jakub", "Koko", DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
+        var borrowRecord = new BorrowRecord(30, new Student(person, DateTime.Now), resource);
 
         borrowRecord.ReturnDate = borrowRecord.DueDate.AddDays(5);
 
@@ -60,7 +76,10 @@ public class EntitiesTests
     public void Payment_Constructor_WhenBothSubscriptionAndBorrowRecordProvided_ThrowsException()
     {
         var subscription = MakeSub(DateTime.Now, DateTime.Now.AddMonths(1));
-        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
+        var person = new Person("Jakub", "Koko", DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
+        var borrowRecord = new BorrowRecord(30, new Student(person, DateTime.Now), resource);
 
         var ex = Assert.Throws<PaymentXorViolationException>(() =>
         {
@@ -135,7 +154,10 @@ public class EntitiesTests
     [Test]
     public void BorrowRecord_ReturnOnTime_FineAmountIsZero()
     {
-        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
+        var person = new Person("Jakub", "Koko", DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
+        var borrowRecord = new BorrowRecord(30, new Student(person, DateTime.Now), resource);
 
         borrowRecord.ReturnDate = borrowRecord.DueDate;
         var fineAmount = borrowRecord.FineAmount;
@@ -180,7 +202,11 @@ public class EntitiesTests
     [Test]
     public void IDigitalResource_AddTranslation_WithLanguage_ThrowsNotSupportedExceptionWhenExpected()
     {
+        var resourceBook = CreateResource();
+        var resourceOnlineMagazine = CreateResource();
+        
         Book book = new Book(
+            resourceBook,
             "978-3-16-148410-0",
             "Clean Code",
             "A Handbook of Agile Software Craftsmanship",
@@ -192,6 +218,7 @@ public class EntitiesTests
         );
 
         OnlineMagazine magazine = new OnlineMagazine(
+            resourceOnlineMagazine,
             "https://newyorkmagazine.com/harvard-law-is-awful",
             "Harvard Law is Awful",
             "About Harvard law.",
@@ -210,10 +237,12 @@ public class EntitiesTests
     [Test]
     public void Author_AddAuthor_WithDuplicateName_ThrowsPersonAlreadyExistsException()
     {
-        var author1 = new Author("Stephen", "King", new DateTime(1947, 9, 21), "stephen.king@example.com", "The King");
+        var person = new Person("Stephen", "King", new DateTime(1947, 9, 21), "stephen.king@example.com");
+        var personEx = new Person("STEPHEN", "KING", new DateTime(1950, 1, 1), "another.email@example.com");
+        var author1 = new Author(person, "The King");
 
         var ex = Assert.Throws<PersonAlreadyExistsException>(() =>
-            new Author("STEPHEN", "KING", new DateTime(1950, 1, 1), "another.email@example.com", "Different Nickname"));
+            new Author(personEx, "Different Nickname"));
         Assert.That(ex.Message, Does.Contain("Person with name"));
         Assert.That(ex.Message, Does.Contain("STEPHEN KING"));
     }
@@ -229,6 +258,10 @@ public class EntitiesTests
             var originalBorrowDate = new DateTime(2025, 1, 15, 10, 30, 0);
             var originalDueDate = originalBorrowDate.AddDays(30);
             var originalReturnDate = originalDueDate.AddDays(5);
+            
+            var person = new Person("Jakub", "Koko", DateTime.Now);
+            var resource = CreateResource();
+            var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
 
             var borrowRecord = new BorrowRecord(
                 originalBorrowDate,
@@ -236,8 +269,8 @@ public class EntitiesTests
                 originalReturnDate,
                 BorrowRecordStatus.Returned, 
                 "BR-TEST123",
-                new Student("Jakub", "Koko", DateTime.Now, DateTime.Now),
-                new Newspaper("Nothing", "Nothing", "Nothing"),
+                new Student(person, DateTime.Now),
+                resource,
                 null
                 );
 
@@ -270,11 +303,14 @@ public class EntitiesTests
     [Test]
     public void Author_AddAuthor_WithDuplicateNickname_ThrowsAuthorWithSuchNicknameAlreadyExistsException()
     {
-        new Author("John", "Doe", new DateTime(1995, 5, 5), "john.doe@example.com", "JD");
+        var person1 = new Person("John", "Doe", new DateTime(1995, 5, 5), "john.doe@example.com");
+        var person2 = new Person("Jane", "Doe", new DateTime(2000, 2, 2), "jane.doe@example.com");
+        
+        new Author(person1, "JD");
 
         Assert.Throws<AuthorWithSuchNicknameAlreadyExistsException>(() =>
         {
-            new Author("Jane", "Doe", new DateTime(2000, 2, 2), "jane.doe@example.com", "JD");
+            new Author(person2, "JD");
         });
     }
 
@@ -283,7 +319,8 @@ public class EntitiesTests
     {
         Assert.Throws<NicknameIsEmptyException>(() =>
         {
-            new Author("John", "Doe", new DateTime(2012, 11, 7), "john.doe@example.com", " ");
+            var person = new Person("John", "Doe", new DateTime(2012, 11, 7), "john.doe@example.com");
+            new Author(person, " ");
         });
     }
 
@@ -292,7 +329,8 @@ public class EntitiesTests
     {
         Assert.Throws<TitleIsEmptyException>(() =>
         {
-            new Book("978-0-307-74365-5", "", "Description");
+            var resource = CreateResource();
+            new Book(resource,"978-0-307-74365-5", "", "Description");
         });
     }
 
@@ -301,7 +339,8 @@ public class EntitiesTests
     {
         Assert.Throws<DescriptionIsEmptyException>(() =>
         {
-            new Book("978-0-307-74365-5", "Title", "");
+            var resource = CreateResource();
+            new Book(resource, "978-0-307-74365-5", "Title", "");
         });
     }
 
@@ -310,7 +349,8 @@ public class EntitiesTests
     {
         Assert.Throws<InvalidQuantityException>(() =>
         {
-            new Book("978-0-307-74365-5", "Title", "Description", quantity: 0);
+            var resource = CreateResource();
+            new Book(resource,"978-0-307-74365-5", "Title", "Description", quantity: 0);
         });
     }
 
@@ -319,38 +359,60 @@ public class EntitiesTests
     {
         Assert.Throws<BookISBNIsEmptyException>(() =>
         {
-            new Book("", "Title", "Description");
+            var resource = CreateResource();
+            new Book(resource,"", "Title", "Description");
         });
     }
 
     [Test]
     public void Book_AddBook_WithDuplicateIsbn_ThrowsBookAlreadyExistsException()
     {
-        new Book("978-0-307-74365-5", "Title", "Description");
+        var resource1 = CreateResource();
+        new Book(resource1, "978-0-307-74365-5", "Title", "Description");
 
         Assert.Throws<BookAlreadyExistsException>(() =>
         {
-            new Book("978-0-307-74365-5", "Title2", "Description2");
+            var resource2 = CreateResource();
+            new Book(resource2, "978-0-307-74365-5", "Title2", "Description2");
         });
     }
 
     [Test]
     public void BorrowRecord_Constructor_WithInvalidBorrowDays_ThrowsInvalidBorrowDaysException()
     {
-        Assert.Throws<InvalidBorrowDaysException>(() => new BorrowRecord(0, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing")));
+        Assert.Throws<InvalidBorrowDaysException>(() =>
+        {
+            var person = new Person("Jakub", "Koko", DateTime.Now);
+            var resource = CreateResource();
+            var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
+            
+            new BorrowRecord(
+                0,
+                new Student(person, DateTime.Now),
+                resource
+                );
+        });
     }
 
     [Test]
     public void BorrowRecord_CancelBorrowRecordRequest_WhenActive_ThrowsBorrowRecordIsActiveException()
     {
-        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
+        var person = new Person("Jakub", "Koko", DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
+        
+        var borrowRecord = new BorrowRecord(30, new Student(person, DateTime.Now), resource);
         Assert.Throws<BorrowRecordIsActiveException>(() => borrowRecord.CancelBorrowRecordRequest());
     }
 
     [Test]
     public void BorrowRecord_ReturnBorrowRecord_WhenInactive_ThrowsBorrowRecordIsInactiveException()
     {
-        var borrowRecord = new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"));
+        var person = new Person("Jakub", "Koko", DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
+        
+        var borrowRecord = new BorrowRecord(30, new Student(person, DateTime.Now), resource);
         borrowRecord.Status = BorrowRecordStatus.Returned;
         Assert.Throws<BorrowRecordIsInactiveException>(() => borrowRecord.ReturnBorrowRecord());
     }
@@ -371,57 +433,91 @@ public class EntitiesTests
     [Test]
     public void Newspaper_Constructor_WithEmptyDescription_ThrowsDescriptionIsEmptyException()
     {
-        Assert.Throws<DescriptionIsEmptyException>(() => new Newspaper("Publisher", "Title", ""));
+        Assert.Throws<DescriptionIsEmptyException>(() =>
+        {
+            var resource = CreateResource();
+            new Newspaper(resource,"Publisher", "Title", "");
+        });
     }
 
     [Test]
     public void Newspaper_Constructor_WithInvalidQuantity_ThrowsInvalidQuantityException()
     {
-        Assert.Throws<InvalidQuantityException>(() => new Newspaper("Publisher", "Title", "Description", quantity: 0));
+        Assert.Throws<InvalidQuantityException>(() =>
+        {
+            var resource = CreateResource();
+            new Newspaper(resource, "Publisher", "Title", "Description", quantity: 0);
+        });
     }
 
     [Test]
     public void Newspaper_Constructor_WithEmptyTitle_ThrowsTitleIsEmptyException()
     {
-        Assert.Throws<TitleIsEmptyException>(() => new Newspaper("Publisher", "", "Description"));
+        Assert.Throws<TitleIsEmptyException>(() =>
+        {
+            var resource = CreateResource();
+            new Newspaper(resource, "Publisher", "", "Description");
+        });
     }
 
     [Test]
     public void Newspaper_Constructor_WithEmptyPublisher_ThrowsPublisherIsEmptyException()
     {
-        Assert.Throws<PublisherIsEmptyException>(() => new Newspaper("", "Title", "Description"));
+        Assert.Throws<PublisherIsEmptyException>(() =>
+        {
+            var resource = CreateResource();
+            new Newspaper(resource,"", "Title", "Description");
+        });
     }
 
     [Test]
     public void Newspaper_AddNewspaper_WithDuplicateNewspaper_ThrowsNewspaperAlreadyExistsException()
     {
-        new Newspaper("Publisher", "Title", "Description");
-        Assert.Throws<NewspaperAlreadyExistsException>(() => new Newspaper("Publisher", "Title", "Description"));
+        var resource1 = CreateResource();
+        var resource2 = CreateResource();
+        
+        new Newspaper(resource1,"Publisher", "Title", "Description");
+        Assert.Throws<NewspaperAlreadyExistsException>(() => new Newspaper(resource2,"Publisher", "Title", "Description"));
     }
 
     [Test]
     public void OnlineMagazine_Constructor_WithEmptyTitle_ThrowsTitleIsEmptyException()
     {
-        Assert.Throws<TitleIsEmptyException>(() => new OnlineMagazine("link", "", "description"));
+        Assert.Throws<TitleIsEmptyException>(() =>
+        {
+            var resource = CreateResource();
+            new OnlineMagazine(resource,"link", "", "description");
+        });
     }
 
     [Test]
     public void OnlineMagazine_Constructor_WithEmptyDescription_ThrowsDescriptionIsEmptyException()
     {
-        Assert.Throws<DescriptionIsEmptyException>(() => new OnlineMagazine("link", "title", ""));
+        Assert.Throws<DescriptionIsEmptyException>(() =>
+        {
+            var resource = CreateResource();
+            new OnlineMagazine(resource,"link", "title", "");
+        });
     }
 
     [Test]
     public void OnlineMagazine_Constructor_WithEmptyPageLink_ThrowsPageLinkIsEmptyException()
     {
-        Assert.Throws<PageLinkIsEmptyException>(() => new OnlineMagazine("", "title", "description"));
+        Assert.Throws<PageLinkIsEmptyException>(() =>
+        {
+            var resource = CreateResource();
+            new OnlineMagazine(resource,"", "title", "description");
+        });
     }
 
     [Test]
     public void OnlineMagazine_AddOnlineMagazine_WithDuplicatePageLink_ThrowsOnlineMagazineAlreadyExistsException()
     {
-        new OnlineMagazine("link", "title", "description");
-        Assert.Throws<OnlineMagazineAlreadyExistsException>(() => new OnlineMagazine("link", "title2", "description2"));
+        var resource1 = CreateResource();
+        var resource2 = CreateResource();
+        
+        new OnlineMagazine(resource1, "link", "title", "description");
+        Assert.Throws<OnlineMagazineAlreadyExistsException>(() => new OnlineMagazine(resource2,"link", "title2", "description2"));
     }
 
     [Test]
@@ -459,41 +555,55 @@ public class EntitiesTests
     [Test]
     public void Staff_Constructor_WithEmptyDepartment_ThrowsDepartmentIsEmptyException()
     {
-        Assert.Throws<DepartmentIsEmptyException>(() => new Staff("John", "Doe", new DateTime(1995, 5, 5), ""));
+        Assert.Throws<DepartmentIsEmptyException>(() =>
+        {
+            var person = new Person("John", "Doe", new DateTime(1995, 5, 5));
+            new Staff(person, "");
+        });
     }
 
     [Test]
     public void Staff_SetSupervisor_WithNullSupervisor_ThrowsStaffIsNullException()
     {
-        var staff = new Staff("Bob", "Doe", new DateTime(2001, 1, 1), "IT");
+        var person = new Person("Bob", "Doe", new DateTime(2001, 1, 1));
+        var staff = new Staff(person, "IT");
         Assert.Throws<StaffIsNullException>(() => staff.SetSupervisor(null));
     }
 
     [Test]
     public void Staff_SetSupervisor_WithSelfAsSupervisor_ThrowsStaffSelfSupervisionException()
     {
-        var staff = new Staff("John", "Doe", new DateTime(1990, 1, 1), "IT");
+        var person = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var staff = new Staff(person, "IT");
         Assert.Throws<StaffSelfSupervisionException>(() => staff.SetSupervisor(staff));
     }
 
     [Test]
     public void Student_Constructor_WithFutureEnrollmentDate_ThrowsInvalidEnrollmentDateException()
     {
-        Assert.Throws<InvalidEnrollmentDateException>(() => new Student("John", "Doe", new DateTime(2005, 6, 7), DateTime.Now.AddDays(1)));
+        Assert.Throws<InvalidEnrollmentDateException>(() =>
+        {
+            var person = new Person("John", "Doe", new DateTime(2005, 6, 7));
+            new Student(person, DateTime.Now.AddDays(1));
+        });
     }
 
     [Test]
     public void Student_AddSubscription_WithNullSubscription_ThrowsSubscriptionIsNullException()
     {
-        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), new DateTime(2023, 1, 1));
+        var person = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, new DateTime(2023, 1, 1));
         Assert.Throws<SubscriptionIsNullException>(() => student.AddSubscription(null));
     }
 
     [Test]
     public void Student_AddSubscription_WithSubscriptionBelongingToAnotherStudent_ThrowsSubscriptionAlreadyBelongsException()
     {
-        var student1 = new Student("Bob", "Doe", new DateTime(1990, 1, 1), new DateTime(2025, 10, 10));
-        var student2 = new Student("Jane", "Doe", new DateTime(1991, 1, 1), new DateTime(2024, 3, 3));
+        var person1 = new Person("Bob", "Doe", new DateTime(1990, 1, 1));
+        var student1 = new Student(person1, new DateTime(2025, 10, 10));
+        
+        var person2 = new Person("Jane", "Doe", new DateTime(1991, 1, 1));
+        var student2 = new Student(person2, new DateTime(2024, 3, 3));
 
         // subscription already associated with student1
         var subscription = MakeSub(DateTime.Now, DateTime.Now.AddMonths(1), student1);
@@ -506,12 +616,15 @@ public class EntitiesTests
     [Test]
     public void Student_UpdateSubscription_WithUnassignedSubscription_ThrowsSubscriptionIsNotAssignedException()
     {
-        var student = new Student("John", "Kolins", new DateTime(1990, 1, 1), new DateTime(2023, 1, 1));
+        var person1 = new Person("John", "Kolins", new DateTime(1990, 1, 1));
+        var student = new Student(person1, new DateTime(2023, 1, 1));
 
-        var studentTemp = new Student("Temp", "T", new DateTime(1990,1,1), DateTime.Now);
+        var person2 = new Person("Temp", "T", new DateTime(1990, 1, 1));
+        var studentTemp = new Student(person2, DateTime.Now);
         var oldSub = MakeSub(DateTime.Now, DateTime.Now.AddMonths(1), studentTemp);
 
-        var studentTemp2 = new Student("Temp2", "X", new DateTime(1990,1,2), DateTime.Now);
+        var person3 = new Person("Temp2", "X", new DateTime(1990, 1, 2));
+        var studentTemp2 = new Student(person3, DateTime.Now);
         var newSub = MakeSub(DateTime.Now, DateTime.Now.AddMonths(2), studentTemp2);
 
         // student has NO current subscription -> should throw
@@ -533,8 +646,11 @@ public class EntitiesTests
     [Test]
     public void Subscription_SetStudent_WithAlreadyAssignedSubscription_ThrowsSubscriptionAlreadyBelongsException()
     {
-        var student1 = new Student("John", "Doe", new DateTime(1990, 1, 1), new DateTime(2023, 1, 1));
-        var student2 = new Student("Jane", "Doe", new DateTime(1991, 1, 1), new DateTime(2023, 1, 1));
+        var person1 = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var student1 = new Student(person1, new DateTime(2023, 1, 1));
+        
+        var person2 = new Person("Jane", "Doe", new DateTime(1991, 1, 1));
+        var student2 = new Student(person2, new DateTime(2023, 1, 1));
 
         var subscription = MakeSub(DateTime.Now, DateTime.Now.AddMonths(1), student1);
 
@@ -546,8 +662,11 @@ public class EntitiesTests
     [Test]
     public void Translation_CannotBeSharedBetweenOwners()
     {
-        IDigitalResource book1 = new Book("ISBN1", "Book 1", "Desc", link: "http://book1.com");
-        IDigitalResource book2 = new Book("ISBN2", "Book 2", "Desc", link: "http://book2.com");
+        var resource1 = CreateResource();
+        Book book1 = new Book(resource1, "ISBN1", "Book 1", "Desc", link: "http://book1.com");
+        
+        var resource2 = CreateResource();
+        Book book2 = new Book(resource2,"ISBN2", "Book 2", "Desc", link: "http://book2.com");
 
         book1.AddTranslation("english");
 
@@ -571,7 +690,8 @@ public class EntitiesTests
     [Test]
     public void Book_RemoveBook_CascadesDeleteToTranslations()
     {
-        IDigitalResource book = new Book("ISBN123", "Test Book", "Description", link: "http://book.com");
+        var resource = CreateResource();
+        Book book = new Book(resource, "ISBN123", "Test Book", "Description", link: "http://book.com");
         book.AddTranslation("english");
         book.AddTranslation("polish");
 
@@ -585,8 +705,8 @@ public class EntitiesTests
     [Test]
     public void OnlineMagazine_RemoveOnlineMagazine_CascadesDeleteToTranslations()
     {
-        IDigitalResource magazine = new OnlineMagazine("http://mag.com", "Test Mag", "Description",
-                                          link: "http://mag.com/content");
+        var resource = CreateResource();
+        OnlineMagazine magazine = new OnlineMagazine(resource,"http://mag.com", "Test Mag", "Description", link: "http://mag.com/content");
         magazine.AddTranslation("english");
         magazine.AddTranslation("ukrainian");
 
@@ -600,7 +720,8 @@ public class EntitiesTests
     [Test]
     public void Translation_HasOwnerReference()
     {
-        IDigitalResource book = new Book("ISBN456", "Test Book", "Description", link: "http://book.com");
+        var resource = CreateResource();
+        Book book = new Book(resource,"ISBN456", "Test Book", "Description", link: "http://book.com");
         book.AddTranslation("english");
 
         // Get the translation from extent by filtering by owner ISBN
@@ -615,7 +736,8 @@ public class EntitiesTests
     [Test]
     public void Translation_OwnerReference_PersistsAndResolves()
     {
-        IDigitalResource book = new Book("ISBN789", "Test Book", "Description", link: "http://book.com");
+        var resource = CreateResource();
+        Book book = new Book(resource, "ISBN789", "Test Book", "Description", link: "http://book.com");
         book.AddTranslation("polish");
 
         // Get the translation from extent (simulating reload)
@@ -668,7 +790,8 @@ public class EntitiesTests
 
         try
         {
-            var originalAuthor = new Author("Ben", "White", new DateTime(1976, 12, 16), "ben.white@gmail.com", "Classic");
+            var person = new Person("Ben", "White", new DateTime(1976, 12, 16), "ben.white@gmail.com");
+            var originalAuthor = new Author(person,"Classic");
             var authorList = new List<Author> { originalAuthor };
 
             persistenceService.Save(authorList);
@@ -680,10 +803,10 @@ public class EntitiesTests
             Assert.That(loadedAuthors, Has.Count.EqualTo(1));
 
             var loadedAuthor = loadedAuthors[0];
-            Assert.That(loadedAuthor.FirstName, Is.EqualTo("Ben"));
-            Assert.That(loadedAuthor.LastName, Is.EqualTo("White"));
-            Assert.That(loadedAuthor.DateOfBirth, Is.EqualTo(new DateTime(1976, 12, 16)));
-            Assert.That(loadedAuthor.Email, Is.EqualTo("ben.white@gmail.com"));
+            Assert.That(loadedAuthor.GetPerson().FirstName, Is.EqualTo("Ben"));
+            Assert.That(loadedAuthor.GetPerson().LastName, Is.EqualTo("White"));
+            Assert.That(loadedAuthor.GetPerson().DateOfBirth, Is.EqualTo(new DateTime(1976, 12, 16)));
+            Assert.That(loadedAuthor.GetPerson().Email, Is.EqualTo("ben.white@gmail.com"));
             Assert.That(loadedAuthor.Nickname, Is.EqualTo("Classic"));
         }
         finally
@@ -704,7 +827,8 @@ public class EntitiesTests
         try
         {
             var enrollmentDate = new DateTime(2023, 9, 1);
-            var originalStudent = new Student("Harry", "Potter", new DateTime(1980, 7, 31), enrollmentDate);
+            var person = new Person("Harry", "Potter", new DateTime(1980, 7, 31));
+            var originalStudent = new Student(person, enrollmentDate);
             var studentList = new List<Student> { originalStudent };
 
             persistenceService.Save(studentList);
@@ -714,9 +838,9 @@ public class EntitiesTests
             Assert.That(loadedStudents, Has.Count.EqualTo(1));
 
             var loadedStudent = loadedStudents[0];
-            Assert.That(loadedStudent.FirstName, Is.EqualTo("Harry"));
-            Assert.That(loadedStudent.LastName, Is.EqualTo("Potter"));
-            Assert.That(loadedStudent.DateOfBirth, Is.EqualTo(new DateTime(1980, 7, 31)));
+            Assert.That(loadedStudent.GetPerson().FirstName, Is.EqualTo("Harry"));
+            Assert.That(loadedStudent.GetPerson().LastName, Is.EqualTo("Potter"));
+            Assert.That(loadedStudent.GetPerson().DateOfBirth, Is.EqualTo(new DateTime(1980, 7, 31)));
             Assert.That(loadedStudent.EnrollmentDate, Is.EqualTo(enrollmentDate));
         }
         finally
@@ -739,8 +863,11 @@ public class EntitiesTests
             Staff.ClearStaffExtent();
             Person.ClearExtent();
 
-            var supervisor = new Staff("Minerva", "McGonagall", new DateTime(1935, 10, 4), "Transfiguration");
-            var originalStaff = new Staff("Albus", "Dumbledore", new DateTime(1881, 8, 1), "Headmaster");
+            var person1 = new Person("Minerva", "McGonagall", new DateTime(1935, 10, 4));
+            var supervisor = new Staff(person1, "Transfiguration");
+
+            var person2 = new Person("Albus", "Dumbledore", new DateTime(1881, 8, 1));
+            var originalStaff = new Staff(person2, "Headmaster");
             originalStaff.SetSupervisor(supervisor);
 
             var staffList = new List<Staff> { originalStaff, supervisor };
@@ -753,14 +880,14 @@ public class EntitiesTests
             Assert.That(loadedStaffList, Is.Not.Null);
             Assert.That(loadedStaffList, Has.Count.EqualTo(2));
 
-            var loadedDumbledore = loadedStaffList.First(s => s.FirstName == "Albus");
-            var loadedMcGonagall = loadedStaffList.First(s => s.FirstName == "Minerva");
+            var loadedDumbledore = loadedStaffList.First(s => s.GetPerson().FirstName == "Albus");
+            var loadedMcGonagall = loadedStaffList.First(s => s.GetPerson().FirstName == "Minerva");
 
-            Assert.That(loadedDumbledore.FirstName, Is.EqualTo("Albus"));
-            Assert.That(loadedDumbledore.LastName, Is.EqualTo("Dumbledore"));
+            Assert.That(loadedDumbledore.GetPerson().FirstName, Is.EqualTo("Albus"));
+            Assert.That(loadedDumbledore.GetPerson().LastName, Is.EqualTo("Dumbledore"));
             Assert.That(loadedDumbledore.Department, Is.EqualTo("Headmaster"));
             Assert.That(loadedDumbledore.GetSupervisor(), Is.Not.Null);
-            Assert.That(loadedDumbledore.GetSupervisor().FirstName, Is.EqualTo("Minerva"));
+            Assert.That(loadedDumbledore.GetSupervisor().GetPerson().FirstName, Is.EqualTo("Minerva"));
         }
         finally
         {
@@ -779,7 +906,9 @@ public class EntitiesTests
 
         try
         {
+            var resource = CreateResource();
             var originalBook = new Book(
+                resource,
                 "978-0439708180",
                 "Harry Potter and the Sorcerer's Stone",
                 "First book in the series",
@@ -855,7 +984,8 @@ public class EntitiesTests
 
         try
         {
-            var originalNewspaper = new Newspaper("Daily Prophet", "War is Over", "Voldemort defeated", quantity: 100);
+            var resource = CreateResource();
+            var originalNewspaper = new Newspaper(resource,"Daily Prophet", "War is Over", "Voldemort defeated", quantity: 100);
             var newspaperList = new List<Newspaper> { originalNewspaper };
 
             persistenceService.Save(newspaperList);
@@ -887,7 +1017,9 @@ public class EntitiesTests
 
         try
         {
+            var resource = CreateResource();
             var originalMagazine = new OnlineMagazine(
+                resource,
                 "https://witchweekly.com/latest",
                 "Witch Weekly",
                 "Latest issue",
@@ -1014,16 +1146,20 @@ public class EntitiesTests
     
     private Subscription MakeSub(DateTime start, DateTime end, Student? student = null)
     {
+        var person1 = new Person("Auto", "Gen", new DateTime(1990, 1, 1));
         if (student == null)
         {
-            student = new Student("Auto", "Gen", new DateTime(1990, 1, 1), DateTime.Now);
+            student = new Student(person1, DateTime.Now);
         }
 
+        var person2 = new Person("Jakub", "Koko", DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
         var payment = new Payment(
             10,
             DateTime.Now,
             PaymentMethod.Cash,
-            borrowRecord: new BorrowRecord(30, new Student("Jakub", "Koko", DateTime.Now, DateTime.Now), new Newspaper("Nothing", "Nothing", "Nothing"))); // safe for XOR
+            borrowRecord: new BorrowRecord(30, new Student(person2, DateTime.Now), resource)); // safe for XOR
 
         return new Subscription(start, end, student, new[] { payment });
     }
@@ -1032,10 +1168,12 @@ public class EntitiesTests
     public void BorrowRecord_ReborrowResourceCorrectlyWorks()
     {
         // Allows duplicates
-        var student = new Student("Auto", "Gen", new DateTime(1990, 1, 1), DateTime.Now);
-        var newspaper = new Newspaper("Nothing", "nNothing", "Nothing");
-        student.BorrowResource(newspaper);
-        Assert.DoesNotThrow(() => student.BorrowResource(newspaper), "Student should allow to borrow the same resource.");
+        var person = new Person("Jakub", "Koko", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now);
+        var resource = CreateResource();
+        var newspaper = new Newspaper(resource,"Nothing", "nNothing", "Nothing");
+        student.BorrowResource(resource);
+        Assert.DoesNotThrow(() => student.BorrowResource(resource), "Student should allow to borrow the same resource.");
         
         // Maintains reverse association
         foreach (var record in BorrowRecord.GetAllBorrowRecords())
@@ -1047,8 +1185,10 @@ public class EntitiesTests
     [Test]
     public void Staff_SetSupervisor_AddsReverseSubordinateRelation()
     {
-        var supervisor = new Staff("Alice", "Smith", new DateTime(1980, 1, 1), "IT");
-        var worker = new Staff("Bob", "Jones", new DateTime(1990, 1, 1), "IT");
+        var person1 = new Person("Alice", "Smith", new DateTime(1980, 1, 1));
+        var supervisor = new Staff(person1, "IT");
+        var person2 = new Person("Bob", "Jones", new DateTime(1990, 1, 1));
+        var worker = new Staff(person2, "IT");
 
         worker.SetSupervisor(supervisor);
 
@@ -1059,8 +1199,10 @@ public class EntitiesTests
     [Test]
     public void Staff_AddSubordinate_SetsSupervisorOnSubordinate()
     {
-        var supervisor = new Staff("Alice", "Smith", new DateTime(1980, 1, 1), "IT");
-        var worker = new Staff("Bob", "Jones", new DateTime(1990, 1, 1), "IT");
+        var person1 = new Person("Alice", "Smith", new DateTime(1980, 1, 1));
+        var supervisor = new Staff(person1, "IT");
+        var person2 = new Person("Bob", "Jones", new DateTime(1990, 1, 1));
+        var worker = new Staff(person2, "IT");
 
         supervisor.AddSubordinate(worker);
 
@@ -1071,9 +1213,12 @@ public class EntitiesTests
     [Test]
     public void Staff_ChangeSupervisor_UpdatesBothOldAndNewRelations()
     {
-        var oldSup = new Staff("Old", "Sup", new DateTime(1980, 1, 1), "HR");
-        var newSup = new Staff("New", "Sup", new DateTime(1985, 1, 1), "HR");
-        var worker = new Staff("Worker", "Guy", new DateTime(1990, 1, 1), "HR");
+        var person1 = new Person("Old", "Sup", new DateTime(1980, 1, 1));
+        var oldSup = new Staff(person1, "HR");
+        var person2 = new Person("New", "Sup", new DateTime(1985, 1, 1));
+        var newSup = new Staff(person2, "HR");
+        var person3 = new Person("Worker", "Guy", new DateTime(1990, 1, 1));
+        var worker = new Staff(person3, "HR");
 
         worker.SetSupervisor(oldSup);
         worker.ChangeSupervisor(newSup);
@@ -1086,7 +1231,8 @@ public class EntitiesTests
     [Test]
     public void Student_AddSubscription_SetsReverseReference()
     {
-        var student = new Student("Bob", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var person = new Person("Bob", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-10));
         var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { payment });
 
@@ -1097,7 +1243,8 @@ public class EntitiesTests
     [Test]
     public void Student_AddSubscription_WhenAlreadyHasOne_ThrowsException()
     {
-        var student = new Student("Bob", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var person = new Person("Bob", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-10));
 
         var sub1 = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student,
             new[] { new Payment(20, DateTime.Now, PaymentMethod.Cash) });
@@ -1109,7 +1256,8 @@ public class EntitiesTests
     [Test]
     public void Subscription_AddPayment_SetsReverseReference()
     {
-        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var person = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-10));
 
         var p1 = new Payment(10, DateTime.Now, PaymentMethod.Cash);
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { p1 });
@@ -1124,7 +1272,8 @@ public class EntitiesTests
     [Test]
     public void Subscription_RemovePayment_ClearsReverseReference()
     {
-        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var person = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-10));
         var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { payment });
 
@@ -1136,23 +1285,21 @@ public class EntitiesTests
     
     private BorrowRecord MakeBorrowRecord()
     {
-        var student = new Student("Borrow", "User", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-100));
+        var person = new Person("Borrow", "User", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-100));
 
-        Resource resource = new Book(
-            isbn: "111-222-333",
-            title: "Test Resource",
-            description: "A simple test book used for unit tests."
-        );
+        var resource = CreateResource();
+        Book book = new Book(resource,"111-222-333","Test Resource","A simple test book used for unit tests.");
 
         return new BorrowRecord(
-            borrowDate: DateTime.Now.AddDays(-1),
-            dueDate: DateTime.Now.AddDays(14),
-            returnDate: null,
-            status: BorrowRecordStatus.Ongoing,
-            borrowCode: null,
-            _student: student,
-            _resource: resource,
-            _payment: null
+            DateTime.Now.AddDays(-1),
+            DateTime.Now.AddDays(14),
+            null,
+            BorrowRecordStatus.Ongoing,
+            null,
+            student,
+            resource,
+            null
         );
     }
 
@@ -1160,7 +1307,8 @@ public class EntitiesTests
     [Test]
     public void Subscription_AddPayment_WhenPaymentBelongsToBorrowRecord_ThrowsException()
     {
-        var student = new Student("John", "Doe", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-10));
+        var person = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-10));
         var validPayment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { validPayment });
 
@@ -1172,7 +1320,8 @@ public class EntitiesTests
     [Test]
     public void Payment_Constructor_XorViolation_ThrowsException()
     {
-        var student = new Student("X", "Y", new DateTime(1990,1,1), DateTime.Now.AddDays(-5));
+        var person = new Person("John", "Doe", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-5));
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student,
             new[] { new Payment(10, DateTime.Now, PaymentMethod.Cash) });
 
@@ -1189,7 +1338,8 @@ public class EntitiesTests
         var borrowRecord = MakeBorrowRecord();
         var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash, borrowRecord: borrowRecord);
 
-        var student = new Student("Bob", "Test", new DateTime(1990,1,1), DateTime.Now.AddDays(-2));
+        var person = new Person("Bob", "Test", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-2));
         var sub = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student,
             new[] { new Payment(5, DateTime.Now, PaymentMethod.Cash) });
 
@@ -1199,7 +1349,8 @@ public class EntitiesTests
     [Test]
     public void Payment_AssignedThroughSubscriptionConstructor_SetsReverseRelation()
     {
-        var student = new Student("Jim", "Guy", new DateTime(1990,1,1), DateTime.Now.AddDays(-1));
+        var person = new Person("Jim", "Guy", new DateTime(1990, 1, 1));
+        var student = new Student(person, DateTime.Now.AddDays(-1));
         var payment = new Payment(10, DateTime.Now, PaymentMethod.Cash);
 
         var subscription = new Subscription(DateTime.Now, DateTime.Now.AddMonths(1), student, new[] { payment });
@@ -1213,31 +1364,21 @@ public class EntitiesTests
         Attempt_To_Remove_Not_Present_Resource_From_The_Catalog_Must_Throw_ResourceIsAlreadyPresentInTheCatalogException()
     {
         var catalog = new Catalog("Fiction");
-        
-        catalog.AddResource(new Book("978-0765387561",
-            "Harry Potter",
-            "A special collector's edition with author sign",
-            true,
-            450,
-            "https://audible.com/addie-larue",
-            CoverType.Hard,
-            10,
-            null
-        ));
-        
-        Assert.Throws<ResourceIsAlreadyPresentInTheCatalogException>(() => 
-            catalog.AddResource(new Book(
-                "978-1250785596",
-                "Harry Potter",
-                "Travel-size pocket edition for comfortable reading",
-                false,
-                300,
-                "https://store.localbooks.com/pocket-addie",
-                CoverType.Soft,
-                50,
-                null
-            )));
-    }
+        var resource1 = CreateResource();
+        var book1 = new Book(resource1, "978-0765387561", "Harry Potter",
+            "A special collector's edition with author sign", true,
+            450, "https://audible.com/addie-larue", CoverType.Hard, 10, null);
+        catalog.AddResource(resource1);
+
+        Assert.Throws<ResourceIsAlreadyPresentInTheCatalogException>(() =>
+        {
+            var resource2 = CreateResource();
+            var book2 = new Book(resource2, "978-1250785596", "Harry Potter",
+                "Travel-size pocket edition for comfortable reading", false, 300,
+                "https://store.localbooks.com/pocket-addie", CoverType.Soft, 50, null);
+            catalog.AddResource(resource2);
+        });
+}
 
     [Test]
     public void
@@ -1245,16 +1386,14 @@ public class EntitiesTests
     {
         var catalog = new Catalog("Fiction");
 
-        Assert.Throws<ResourceIsNotPresentInTheCatalogException>(() => catalog.RemoveResource(
-            new Book("978-0765387561",
-                "Harry Potter",
+        Assert.Throws<ResourceIsNotPresentInTheCatalogException>(() =>
+        {
+            var resource = CreateResource();
+            var book = new Book(resource, "978-0765387561", "Harry Potter",
                 "A special collector's edition with author sign",
-                true,
-                450,
-                "https://audible.com/addie-larue",
-                CoverType.Hard,
-                10,
-                null
-            )));
+                true, 450, "https://audible.com/addie-larue", CoverType.Hard, 10, null);
+            
+            catalog.RemoveResource(resource);
+        });
     }
 }

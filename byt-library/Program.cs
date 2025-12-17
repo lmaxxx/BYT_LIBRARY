@@ -2,4 +2,5 @@
 
 using byt_library.Domain.Entities;
 
-var author1 = new Author("Stephen", "Kinggggggg", new DateTime(1947, 9, 21), "stephen.king@example.com", "123");
+var person1 = new Person("Stephen", "Kinggggggg", new DateTime(1947, 9, 21), "stephen.king@example.com");
+var author1 = new Author(person1, "123");
