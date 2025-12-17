@@ -8,7 +8,7 @@ namespace byt_library.Domain.Entities;
 public class Staff : IStaff
 {
     private readonly Person _person;
-    private Person GetPerson() => _person;
+    public Person GetPerson() => _person;
     public string Department { get; set; }
     
     private Staff? _supervisor;                        

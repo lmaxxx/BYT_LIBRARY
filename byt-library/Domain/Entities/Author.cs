@@ -7,7 +7,7 @@ namespace byt_library.Domain.Entities;
 public class Author : IAuthor
 {
     private readonly Person _person;
-    private Person GetPerson() => _person;
+    public Person GetPerson() => _person;
     
     public string? Nickname { get; set; }
 

@@ -9,7 +9,7 @@ namespace byt_library.Domain.Entities;
 public class Student : IStudent
 {
     private readonly Person _person;
-    private Person GetPerson() => _person;
+    public Person GetPerson() => _person;
     public DateTime EnrollmentDate { get; set; }
     
     private Subscription? _subscription;

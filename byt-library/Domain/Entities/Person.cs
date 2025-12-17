@@ -113,6 +113,7 @@ public class Person
                 p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (person != null)
             {
+                person.RemoveAllRoles();
                 return _allPersons.Remove(person);
             }
             return false;
@@ -161,7 +162,7 @@ public class Person
     
     public void AssignStaff(Staff staff)
     {
-        if (_student != null)
+        if (_staff != null)
             throw new StaffAlreadyExistsException("Person is already a staff member.");
         
         _staff = staff;
@@ -183,6 +184,36 @@ public class Person
     public void RemoveAuthor()
     {
         _author = null;
+    }
+    
+    private void RemoveAllRoles()
+    {
+        if (_student != null)
+        {
+            Student.RemoveStudent(
+                _student.GetPerson().FirstName,
+                _student.GetPerson().LastName
+            );
+            _student = null;
+        }
+
+        if (_staff != null)
+        {
+            Staff.RemoveStaff(
+                _staff.GetPerson().FirstName,
+                _staff.GetPerson().LastName
+            );
+            _staff = null;
+        }
+
+        if (_author != null)
+        {
+            Author.RemoveAuthor(
+                _author.GetPerson().FirstName,
+                _author.GetPerson().LastName
+            );
+            _author = null;
+        }
     }
 
     public override string ToString()
