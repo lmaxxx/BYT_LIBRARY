@@ -9,6 +9,10 @@ public class Author : IAuthor
     private readonly Person _person;
     public Person GetPerson() => _person;
     
+    private readonly HashSet<Resource> _resources = new();
+    public IReadOnlyCollection<Resource> GetResources()
+        => _resources.ToList().AsReadOnly();
+    
     public string? Nickname { get; set; }
 
     private static List<Author> _allAuthors = new();
@@ -154,6 +158,39 @@ public class Author : IAuthor
             _allAuthors.Clear();
             _persistenceService.Save(_allAuthors);
         }
+    }
+    
+    public void AddResource(Resource resource)
+    {
+        if (resource == null)
+            throw new ResourceIsNullException(nameof(resource), "Resource is null");
+
+        if (_resources.Contains(resource))
+            return;
+
+        _resources.Add(resource);
+
+        if (!resource.GetAuthors().Contains(this))
+            resource.AddAuthor(this);
+    }
+
+    public void RemoveResource(Resource resource)
+    {
+        if (resource == null)
+            throw new ResourceIsNullException(nameof(resource), "Resource is null");
+
+        if (!_resources.Contains(resource))
+            return;
+
+        // enforce min cardinality on Resource
+        if (resource.GetAuthors().Count == 1)
+            throw new InvalidOperationException(
+                "Resource must have at least one author.");
+
+        _resources.Remove(resource);
+
+        if (resource.GetAuthors().Contains(this))
+            resource.RemoveAuthor(this);
     }
 
     public override string ToString()

@@ -20,6 +20,10 @@ public class Resource
     // Relations
     private readonly HashSet<BorrowRecord> _borrowRecords = new();
     private readonly HashSet<Catalog> _catalogs = new();  // Hash set as this is aggregation, which allows sharing parts.
+    private readonly HashSet<Author> _authors = new();
+    
+    public IReadOnlyCollection<Author> GetAuthors()
+        => _authors.ToList().AsReadOnly();
     
     private static List<Resource> _allResources;
     private static readonly object _lockResource;
@@ -44,6 +48,61 @@ public class Resource
             Console.Error.WriteLine($"Failed to load {typeof(Resource).Name}: {ex.Message}");
             _allResources = new List<Resource>();
         }
+    }
+    
+    public Resource(
+        string title,
+        string description,
+        IEnumerable<Author> authors)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new BookISBNIsEmptyException("Resource title cannot be empty");
+
+        if (authors == null || !authors.Any())
+            throw new InvalidOperationException(
+                "Resource must have at least one author.");
+
+        Title = title;
+        Description = description;
+
+        foreach (var author in authors)
+        {
+            AddAuthor(author);
+        }
+
+        AddResource(this);
+    }
+    
+    public void AddAuthor(Author author)
+    {
+        if (author == null)
+            throw new AuthorIsNullException(nameof(author), "Author is null");
+
+        if (_authors.Contains(author))
+            return;
+
+        _authors.Add(author);
+
+        if (!author.GetResources().Contains(this))
+            author.AddResource(this);
+    }
+
+    public void RemoveAuthor(Author author)
+    {
+        if (author == null)
+            throw new AuthorIsNullException(nameof(author), "Author is null");
+
+        if (!_authors.Contains(author))
+            return;
+
+        if (_authors.Count == 1)
+            throw new InvalidOperationException(
+                "Resource must have at least one author.");
+
+        _authors.Remove(author);
+
+        if (author.GetResources().Contains(this))
+            author.RemoveResource(this);
     }
 
     public void AddCatalog(Catalog catalog)
