@@ -2,7 +2,7 @@
 
 namespace byt_library.Domain.Interfaces;
 
-public interface IDigitalResource : IResource
+public interface IDigitalResource
 {
     public int Size { get; set; }
     public string Link { get; set; }

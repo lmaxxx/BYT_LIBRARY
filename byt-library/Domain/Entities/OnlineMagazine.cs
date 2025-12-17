@@ -5,7 +5,7 @@ using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
-public class OnlineMagazine : IDigitalResource
+public class OnlineMagazine : DigitalResource
 {
     public string PageLink { get; set; }
     public bool HasAudio { get; set; }
@@ -13,8 +13,6 @@ public class OnlineMagazine : IDigitalResource
     public string Description { get; set; }
     public int Size { get; set; }
     public string Link { get; set; }
-    [JsonInclude]
-    private readonly HashSet<Translation> _translations = new();
 
     private static List<OnlineMagazine> _allOnlineMagazines = new();
     private static readonly object _lockOnlineMagazine = new();
@@ -41,14 +39,9 @@ public class OnlineMagazine : IDigitalResource
         }
     }
 
-    public OnlineMagazine()
-    {
-        _translations = new HashSet<Translation>();
-    }
-
     [JsonConstructor]
-    public OnlineMagazine(string pageLink, string title, string description,
-                          bool hasAudio = false, int size = 0, string link = "", HashSet<Translation>? _translations = null)
+    public OnlineMagazine(Resource resource, string pageLink, string title, string description,
+                          bool hasAudio = false, int size = 0, string link = "", HashSet<Translation>? _translations = null) : base(resource, size, link)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new TitleIsEmptyException("Online Magazine title cannot be empty");
@@ -62,7 +55,6 @@ public class OnlineMagazine : IDigitalResource
         HasAudio = hasAudio;
         Size = size;
         Link = link;
-        this._translations = _translations ?? new HashSet<Translation>();
         AddOnlineMagazine(this);
     }
 
@@ -127,36 +119,6 @@ public class OnlineMagazine : IDigitalResource
         {
             return _allOnlineMagazines.AsReadOnly();
         }
-    }
-
-    public void AddTranslation(string language)
-    {
-        // Ensure there is no other translation with such a language already
-        if (_translations.FirstOrDefault(translation =>
-                translation.Language.Equals(language, StringComparison.OrdinalIgnoreCase)) != null)
-        {
-            throw new TranslationAlreadyExistsException(language);
-        }
-        // Translation automatically adds owner. Adding it to hashset ensures both objects have each other and no other can access this relationship.
-        _translations.Add(new Translation($"https://some.storage/online-magazines/{PageLink}/{language}", language,
-            PageLink));
-    }
-
-    public bool RemoveTranslation(string language)
-    {
-        // Remove translation from class extent
-        Translation? translation = _translations.FirstOrDefault(translation =>
-            translation.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
-
-        if (translation == null) return false;
-        
-        if (Translation.RemoveTranslation(translation.Link, translation.Language))
-        {
-            _translations.RemoveWhere(t => t.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
-            return true;
-        }
-
-        return false;
     }
 
     public static void ClearOnlineMagazineExtent()

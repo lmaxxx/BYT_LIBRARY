@@ -6,7 +6,7 @@ using byt_library.Domain.Exceptions;
 
 namespace byt_library.Domain.Entities;
 
-public class Book : IDigitalResource, IPrintedResource
+public class Book : PrintedResource, IDigitalResource
 {
     public string ISBN { get; set; }
     public bool HasAudio { get; set; }
@@ -44,15 +44,10 @@ public class Book : IDigitalResource, IPrintedResource
         }
     }
 
-    public Book()
-    {
-        _translations = new HashSet<Translation>();
-    }
-
     [JsonConstructor]
-    public Book(string isbn, string title, string description,
+    public Book(Resource resource, string isbn, string title, string description,
                 bool hasAudio = false, int size = 0, string link = "",
-                CoverType coverType = CoverType.Soft, int quantity = 1, HashSet<Translation>? _translations = null)
+                CoverType coverType = CoverType.Soft, int quantity = 1, HashSet<Translation>? _translations = null) : base(resource, coverType, quantity)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new TitleIsEmptyException("Book title cannot be empty");
@@ -72,6 +67,7 @@ public class Book : IDigitalResource, IPrintedResource
         CoverType = coverType;
         Quantity = quantity;
         this._translations = _translations ?? new HashSet<Translation>();
+        resource.AssignDigitalResource(this);  // As to PrintedResource it is assigned at constructor BUT to Digital one not due to an interface trick for multi-inheritance
         AddBook(this);
     }
 
@@ -148,8 +144,7 @@ public class Book : IDigitalResource, IPrintedResource
             throw new TranslationAlreadyExistsException(language);
         }
         // Translation automatically adds owner. Adding it to hashset ensures both objects have each other and no other can access this relationship.
-        _translations.Add(new Translation($"https://some.storage/online-books/{ISBN}/{language}", language,
-            ISBN));
+        _translations.Add(new Translation($"{Link}/{language}", language, this));
     }
 
     public bool RemoveTranslation(string language)

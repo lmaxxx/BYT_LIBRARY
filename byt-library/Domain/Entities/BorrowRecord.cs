@@ -15,12 +15,15 @@ public class BorrowRecord
     
     private readonly Student _student;
 
-    private readonly IResource _resource;
+    private readonly Resource _resource;
     
     private Payment? _payment;
-    public Payment? GetPayment() => _payment;
+    public Payment? GetPayment() => _payment; 
+    public Resource GetResource() => _resource;
 
-    public BorrowRecord(DateTime borrowDate, DateTime dueDate, DateTime? returnDate, BorrowRecordStatus status, string? borrowCode, Student _student, IResource _resource, Payment? _payment)
+    public Student GetStudent() => _student;
+
+    public BorrowRecord(DateTime borrowDate, DateTime dueDate, DateTime? returnDate, BorrowRecordStatus status, string? borrowCode, Student _student, Resource _resource, Payment? _payment)
     {
         BorrowDate = borrowDate;
         DueDate = dueDate;
@@ -33,11 +36,12 @@ public class BorrowRecord
         this._student = _student;
         _student.AddBorrowRecord(this);
         this._resource = _resource;
+        _resource.AddBorrowRecord(this);
         this._payment = _payment;
         AddBorrowRecord(this);
     }
 
-    public BorrowRecord(int borrowDays, Student _student, IResource _resource)
+    public BorrowRecord(int borrowDays, Student _student, Resource _resource)
     {
         if (borrowDays <= 0)
             throw new InvalidBorrowDaysException();
@@ -48,6 +52,7 @@ public class BorrowRecord
         ReturnDate = null;
         this._student = _student;
         this._resource = _resource;
+        _resource.AddBorrowRecord(this);
         GenerateBorrowCode();
         AddBorrowRecord(this);
     }
@@ -69,16 +74,6 @@ public class BorrowRecord
         var newBorrowRecord = new BorrowRecord(borrowDate, dueDate, ReturnDate, Status, null, _student, _resource, _payment);  // Ensure the student has the new borrow record
         _student.AddBorrowRecord(newBorrowRecord);
         return newBorrowRecord;
-    }
-    
-    public IResource GetResource()
-    {
-        return _resource;
-    }
-    
-    public Student GetStudent()
-    {
-        return _student;
     }
 
     private static List<BorrowRecord> _allBorrowRecords = new();

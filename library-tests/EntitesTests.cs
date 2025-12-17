@@ -557,10 +557,10 @@ public class EntitiesTests
         // Verify each book has its own translation by querying the extent
         var allTranslations = Translation.GetAllTranslations();
         var book1Translations = allTranslations
-            .Where(t => t.Owner is Book b && b.ISBN == ((Book)book1).ISBN)
+            .Where(t => t.GetOwner() is Book b && b.ISBN == ((Book)book1).ISBN)
             .ToList();
         var book2Translations = allTranslations
-            .Where(t => t.Owner is Book b && b.ISBN == ((Book)book2).ISBN)
+            .Where(t => t.GetOwner() is Book b && b.ISBN == ((Book)book2).ISBN)
             .ToList();
 
         Assert.That(book1Translations.Count, Is.EqualTo(1));
@@ -605,11 +605,11 @@ public class EntitiesTests
 
         // Get the translation from extent by filtering by owner ISBN
         var translation = Translation.GetAllTranslations()
-            .First(t => t.Owner is Book b && b.ISBN == "ISBN456");
+            .First(t => t.GetOwner() is Book b && b.ISBN == "ISBN456");
 
-        Assert.That(translation.Owner, Is.Not.Null);
-        Assert.That(translation.Owner, Is.InstanceOf<Book>());
-        Assert.That(((Book)translation.Owner).ISBN, Is.EqualTo("ISBN456"));
+        Assert.That(translation.GetOwner(), Is.Not.Null);
+        Assert.That(translation.GetOwner(), Is.InstanceOf<Book>());
+        Assert.That(((Book)translation.GetOwner()).ISBN, Is.EqualTo("ISBN456"));
     }
 
     [Test]
@@ -621,10 +621,10 @@ public class EntitiesTests
         // Get the translation from extent (simulating reload)
         var translation = Translation.GetAllTranslations()[0];
 
-        Assert.That(translation.Owner, Is.Not.Null);
+        Assert.That(translation.GetOwner(), Is.Not.Null);
         // Verify owner resolves correctly (OwnerId is private, test through Owner)
-        Assert.That(translation.Owner is Book b && b.ISBN == "ISBN789", Is.True);
-        Assert.That(translation.Owner, Is.InstanceOf<Book>());
+        Assert.That(translation.GetOwner() is Book b && b.ISBN == "ISBN789", Is.True);
+        Assert.That(translation.GetOwner(), Is.InstanceOf<Book>());
     }
 
     [Test]
@@ -1138,7 +1138,7 @@ public class EntitiesTests
     {
         var student = new Student("Borrow", "User", new DateTime(1990, 1, 1), DateTime.Now.AddDays(-100));
 
-        IResource resource = new Book(
+        Resource resource = new Book(
             isbn: "111-222-333",
             title: "Test Resource",
             description: "A simple test book used for unit tests."
