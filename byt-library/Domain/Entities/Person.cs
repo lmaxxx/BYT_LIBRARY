@@ -9,6 +9,14 @@ public class Person
     public string LastName { get; set; }
     public string? Email { get; set; }
     public DateTime DateOfBirth { get; set; }
+    
+    private Student? _student;
+    private Staff? _staff;
+    private Author? _author;
+
+    public Student? GetStudent() => _student;
+    public Staff? GetStaff() => _staff;
+    public Author? GetAuthor() => _author;
 
     public int Age
     {
@@ -105,6 +113,7 @@ public class Person
                 p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
             if (person != null)
             {
+                person.RemoveAllRoles();
                 return _allPersons.Remove(person);
             }
             return false;
@@ -135,6 +144,75 @@ public class Person
         {
             _allPersons.Clear();
             _persistenceService.Save(_allPersons);
+        }
+    }
+    
+    public void AssignStudent(Student student)
+    {
+        if (_student != null)
+            throw new StudentAlreadyExistsException("Person is already a student.");
+
+        _student = student;
+    }
+
+    public void RemoveStudent()
+    {
+        _student = null;
+    }
+    
+    public void AssignStaff(Staff staff)
+    {
+        if (_staff != null)
+            throw new StaffAlreadyExistsException("Person is already a staff member.");
+        
+        _staff = staff;
+    }
+
+    public void RemoveStaff()
+    {
+        _staff = null;
+    }
+    
+    public void AssignAuthor(Author author)
+    {
+        if (_author != null)
+            throw new AuthorAlreadyExistsException("Person is already an author.");
+        
+        _author = author;
+    }
+
+    public void RemoveAuthor()
+    {
+        _author = null;
+    }
+    
+    private void RemoveAllRoles()
+    {
+        if (_student != null)
+        {
+            Student.RemoveStudent(
+                _student.GetPerson().FirstName,
+                _student.GetPerson().LastName
+            );
+            _student = null;
+        }
+
+        if (_staff != null)
+        {
+            Staff.RemoveStaff(
+                _staff.GetPerson().FirstName,
+                _staff.GetPerson().LastName
+            );
+            _staff = null;
+        }
+
+        if (_author != null)
+        {
+            Author.RemoveAuthor(
+                _author.GetPerson().FirstName,
+                _author.GetPerson().LastName
+            );
+            _author = null;
         }
     }
 

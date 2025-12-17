@@ -1,10 +1,14 @@
 using byt_library.Domain.Services;
 using byt_library.Domain.Exceptions;
+using byt_library.Domain.Interfaces;
 
 namespace byt_library.Domain.Entities;
 
-public class Author : Person
+public class Author : IAuthor
 {
+    private readonly Person _person;
+    public Person GetPerson() => _person;
+    
     public string? Nickname { get; set; }
 
     private static List<Author> _allAuthors = new();
@@ -31,14 +35,23 @@ public class Author : Person
             _allAuthors = new List<Author>();
         }
     }
-
-    public Author(string firstName, string lastName, DateTime dateOfBirth, string? email = null, string? nickname = null)
-        : base(firstName, lastName, dateOfBirth, email)
+    
+    public Author(Person person, string? nickname = null)
     {
+        if (person == null)
+            throw new PersonIsNullException(nameof(person), "Person is null");
+
         if (nickname != null && string.IsNullOrWhiteSpace(nickname))
             throw new NicknameIsEmptyException();
-        
+
+        if (person.GetAuthor() != null)
+            throw new AuthorWithSuchNameAlreadyExistsException(
+                "Person already has an Author role.");
+
+        _person = person;
         Nickname = nickname;
+
+        person.AssignAuthor(this);
         AddAuthor(this);
     }
 
@@ -47,26 +60,28 @@ public class Author : Person
         if (author == null)
             throw new AuthorIsNullException(nameof(author), "Cannot add null author to extent");
 
+        var person = author.GetPerson();
+
         lock (_lockAuthor)
         {
-            if (_allAuthors.Any(a => a.FirstName.Equals(author.FirstName, StringComparison.OrdinalIgnoreCase) &&
-                                     a.LastName.Equals(author.LastName, StringComparison.OrdinalIgnoreCase)))
-                throw new AuthorWithSuchNameAlreadyExistsException($"Author with name {author.FirstName} {author.LastName} already exists in Author extent");
-            
-            if (!string.IsNullOrWhiteSpace(author.Nickname) && _allAuthors.Any(a => a.Nickname != null && a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
-                throw new AuthorWithSuchNicknameAlreadyExistsException($"Author with nickname {author.Nickname} already exists in Author extent");
+            if (_allAuthors.Any(a =>
+                    a.GetPerson().FirstName.Equals(person.FirstName, StringComparison.OrdinalIgnoreCase) &&
+                    a.GetPerson().LastName.Equals(person.LastName, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new AuthorWithSuchNameAlreadyExistsException(
+                    $"Author with name {person.FirstName} {person.LastName} already exists in Author extent");
+            }
+
+            if (!string.IsNullOrWhiteSpace(author.Nickname) &&
+                _allAuthors.Any(a => a.Nickname != null &&
+                                     a.Nickname.Equals(author.Nickname, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new AuthorWithSuchNicknameAlreadyExistsException(
+                    $"Author with nickname {author.Nickname} already exists in Author extent");
+            }
 
             _allAuthors.Add(author);
-
-            try
-            {
-                _persistenceService.Save(_allAuthors);
-            }
-            catch (Exception ex)
-            {
-                _allAuthors.Remove(author);
-                throw new InvalidOperationException("Failed to persist Author to file", ex);
-            }
+            _persistenceService.Save(_allAuthors);
         }
     }
 
@@ -75,12 +90,13 @@ public class Author : Person
         lock (_lockAuthor)
         {
             var author = _allAuthors.FirstOrDefault(a =>
-                a.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
-                a.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+                a.GetPerson().FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                a.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+
             if (author != null)
             {
                 _allAuthors.Remove(author);
-                RemovePerson(firstName, lastName);
+                author.GetPerson().RemoveAuthor(); // remove role only
                 return true;
             }
             return false;
@@ -92,8 +108,8 @@ public class Author : Person
         lock (_lockAuthor)
         {
             return _allAuthors.FirstOrDefault(a =>
-                a.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
-                a.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
+                a.GetPerson().FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase) &&
+                a.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -101,8 +117,9 @@ public class Author : Person
     {
         lock (_lockAuthor)
         {
-            return _allAuthors.FirstOrDefault(a => a.Nickname != null &&
-                                                   a.Nickname.Equals(nickname, StringComparison.OrdinalIgnoreCase));
+            return _allAuthors.FirstOrDefault(a =>
+                a.Nickname != null &&
+                a.Nickname.Equals(nickname, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -118,9 +135,10 @@ public class Author : Person
     {
         lock (_lockAuthor)
         {
-            return _allAuthors.Where(a => a.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase))
-                             .ToList()
-                             .AsReadOnly();
+            return _allAuthors
+                .Where(a => a.GetPerson().LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase))
+                .ToList()
+                .AsReadOnly();
         }
     }
 
@@ -128,6 +146,11 @@ public class Author : Person
     {
         lock (_lockAuthor)
         {
+            foreach (var author in _allAuthors)
+            {
+                author.GetPerson().RemoveAuthor();
+            }
+
             _allAuthors.Clear();
             _persistenceService.Save(_allAuthors);
         }
