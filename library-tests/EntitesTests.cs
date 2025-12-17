@@ -54,20 +54,24 @@ public class EntitiesTests
 
         return new Resource("Title", "Description", authors);
     }
-
+    
     [Test]
     public void BorrowRecord_CalculateFineAmount_WhenOverdue_ReturnsCorrectFine()
     {
         var person = new Person("Jakub", "Koko", DateTime.Now);
+        
         var resource = CreateResource();
         var newspaper = new Newspaper(resource, "Nothing", "Nothing", "Nothing");
-        var borrowRecord = new BorrowRecord(30, new Student(person, DateTime.Now), resource);
-
+        
+        var student = new Student(person, DateTime.Now);
+        student.BorrowResource(resource);
+        var borrowRecord = BorrowRecord.GetAllBorrowRecords().FirstOrDefault(record => record.GetResource() == resource);
+        
         borrowRecord.ReturnDate = borrowRecord.DueDate.AddDays(5);
-
+        
         var fineAmount = borrowRecord.FineAmount;
         var calculatedFine = borrowRecord.CalculateFine();
-
+        
         Assert.That(fineAmount, Is.EqualTo(5.0), "Fine should be $1 per day overdue");
         Assert.That(calculatedFine, Is.EqualTo(5.0), "CalculateFine() should return same as FineAmount property");
     }
@@ -1370,12 +1374,13 @@ public class EntitiesTests
             450, "https://audible.com/addie-larue", CoverType.Hard, 10, null);
         catalog.AddResource(resource1);
 
+        
+        var resource2 = CreateResource();
+        var book2 = new Book(resource2, "978-1250785596", "Harry Potter",
+            "Travel-size pocket edition for comfortable reading", false, 300,
+            "https://store.localbooks.com/pocket-addie", CoverType.Soft, 50, null);
         Assert.Throws<ResourceIsAlreadyPresentInTheCatalogException>(() =>
         {
-            var resource2 = CreateResource();
-            var book2 = new Book(resource2, "978-1250785596", "Harry Potter",
-                "Travel-size pocket edition for comfortable reading", false, 300,
-                "https://store.localbooks.com/pocket-addie", CoverType.Soft, 50, null);
             catalog.AddResource(resource2);
         });
 }
@@ -1385,15 +1390,16 @@ public class EntitiesTests
         Attemt_To_Add_Existing_Resource_To_The_Catalog_Must_Throw_ResourceIsNotPresentInTheCatalogException()
     {
         var catalog = new Catalog("Fiction");
+        
+        var resource = CreateResource();
 
+        var book = new Book(resource, "978-0765387561", "Harry Potter",
+            "A special collector's edition with author sign",
+            true, 450, "https://audible.com/addie-larue", CoverType.Hard, 10, null);
+        
         Assert.Throws<ResourceIsNotPresentInTheCatalogException>(() =>
-        {
-            var resource = CreateResource();
-            var book = new Book(resource, "978-0765387561", "Harry Potter",
-                "A special collector's edition with author sign",
-                true, 450, "https://audible.com/addie-larue", CoverType.Hard, 10, null);
-            
-            catalog.RemoveResource(resource);
-        });
+        
+           catalog.RemoveResource(resource)
+        );
     }
 }

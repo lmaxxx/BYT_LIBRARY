@@ -53,6 +53,7 @@ public class BorrowRecord
         this._student = _student;
         this._resource = _resource;
         _resource.AddBorrowRecord(this);
+        _student.AddBorrowRecord(this);
         GenerateBorrowCode();
         AddBorrowRecord(this);
     }
