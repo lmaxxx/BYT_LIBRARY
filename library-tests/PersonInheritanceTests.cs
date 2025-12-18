@@ -3,7 +3,7 @@ using byt_library.Domain.Exceptions;
 
 namespace library_tests;
 
-public class PersonRoleCompositionTests
+public class PersonInheritanceTests
 {
     [SetUp]
     public void Setup()
