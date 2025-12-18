@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using byt_library.Domain.Enums;
 using byt_library.Domain.Interfaces;
+using byt_library.Domain.Entities;
 
 namespace byt_library.Domain.Entities;
 
@@ -19,5 +20,9 @@ public class PrintedResource : IPrintedResource
         CoverType = coverType;
         _resource = resource;
         _resource.AssignPrintedResource(this);
+    }
+
+    public Resource GetResource() {
+        return _resource;
     }
 }

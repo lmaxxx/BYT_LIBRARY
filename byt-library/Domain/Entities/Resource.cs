@@ -129,6 +129,10 @@ public class Resource
         {
             throw new ResourceAlreadyHaveChildClassException("Resource already have an assigned digital resource instance.");
         }
+        if (_digitalResource.GetResource() != this)
+        {
+            throw new CompositionConstraintViolationException("Digital resource already have an owner.");
+        }
     }
     
     public void AssignPrintedResource(IPrintedResource printedResource)
@@ -137,6 +141,10 @@ public class Resource
         else
         {
             throw new ResourceAlreadyHaveChildClassException("Resource already have an assigned printed resource instance.");
+        }
+        if (_printedResource.GetResource() != this)
+        {
+            throw new CompositionConstraintViolationException("Digital resource already have an owner.");
         }
     }
     

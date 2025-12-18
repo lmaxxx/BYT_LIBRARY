@@ -10,4 +10,6 @@ public interface IDigitalResource
     public void AddTranslation(string language);  // Adds new translations (since by language - there is no way to add already existing translation to a digital resource - no shared translations)
     public bool RemoveTranslation(string language);  // Returns true if successfully removed the translation
 
+    public Resource GetResource();
+
 }

@@ -51,4 +51,8 @@ public class DigitalResource : IDigitalResource
 
         return false;
     }
+
+    public Resource GetResource() {
+        return _resource;
+    }
 }
